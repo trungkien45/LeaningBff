@@ -1,0 +1,33 @@
+{
+  "culture": "en",
+  "texts": {
+    "AppName": "LearningBff",
+    "Welcome_Title": "Welcome",
+    "Welcome_Text": "This is a minimalist, single layer application startup template for the ABP Framework.",
+    "Login": "Login",
+    "Menu:Home": "Home",
+    "Menu:Admin": "Admin Area",
+    "Admin:Title": "System Admin Area",
+    "Admin:Subtitle": "Central administrative dashboard restricted to Administrators",
+    "Admin:RestrictedNotice": "High-security zone: Only accounts with the Admin role are permitted access.",
+    "Admin:Overview": "System Overview",
+    "Admin:TotalUsers": "Total Users",
+    "Admin:TotalRoles": "Total Roles",
+    "Admin:SecurityStatus": "Security Status",
+    "Admin:SecurityLevel": "Maximum (Admin Role)",
+    "Admin:QuickActions": "Administrative Shortcuts",
+    "Admin:ManageUsers": "User Management",
+    "Admin:ManageUsersDesc": "Manage users, permissions, assign roles, and control account status.",
+    "Admin:ManageRoles": "Role Management",
+    "Admin:ManageRolesDesc": "Configure roles and assign fine-grained operational permissions.",
+    "Admin:SystemSettings": "System Settings",
+    "Admin:SystemSettingsDesc": "Configure security, email, localization, and system-wide options.",
+    "Admin:ApiDocs": "API Documentation (Swagger)",
+    "Admin:ApiDocsDesc": "Explore and interactively test all available RESTful endpoints.",
+    "Admin:HealthChecks": "Health Checks",
+    "Admin:HealthChecksDesc": "Monitor database health, server performance, and background tasks.",
+    "Admin:SystemInfo": "System Information",
+    "Admin:SessionInfo": "Current Active Session",
+    "Admin:AccessControlAudit": "Access Control Audit"
+  }
+}

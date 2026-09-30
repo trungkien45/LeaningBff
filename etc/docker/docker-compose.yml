@@ -1,0 +1,63 @@
+services:
+  learningbff-web:
+    image: learningbff:latest
+    container_name: learningbff
+    build:
+      context: ../../
+      dockerfile: LearningBff/Dockerfile.local
+    environment:
+      - ASPNETCORE_URLS=https://+:8081;http://+:8080;
+      - Kestrel__Certificates__Default__Path=/app/certs/localhost.pfx
+      - Kestrel__Certificates__Default__Password=91f91912-5ab0-49df-8166-23377efaf3cc
+      - App__HealthCheckUrl=http://learningbff:8080/health-status
+      - ConnectionStrings__Default=User ID=postgres;Password=myPassw0rd;Host=postgres;Port=5432;Database=LearningBff;Pooling=false;
+    ports:
+      - "44368:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: on-failure  
+    volumes:
+      - ./certs:/app/certs
+    networks:
+      - abp-network  
+  
+  db-migrator:
+    image: learningbff:latest
+    container_name: db-migrator
+    build:
+      context: ../../
+      dockerfile: LearningBff/Dockerfile.local
+    environment:
+      - ConnectionStrings__Default=User ID=postgres;Password=myPassw0rd;Host=postgres;Port=5432;Database=LearningBff;Pooling=false;
+    command:
+      - --migrate-database
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - abp-network
+  postgres:
+    container_name: postgres-db
+    image: postgres:14.1
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: "postgres"
+      POSTGRES_PASSWORD: "myPassw0rd"
+    volumes:
+      - postgres_data:/var/opt/postgres
+    networks:
+      - abp-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+volumes:
+  postgres_data:
+    name: learningbff_postgres_data
+networks:
+  abp-network:
+    name: learningbff-network
+    driver: bridge

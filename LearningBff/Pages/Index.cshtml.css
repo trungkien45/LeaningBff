@@ -1,0 +1,102 @@
+/* Home Page */
+.home-page {
+    max-width: 960px;
+    margin: 0 auto;
+}
+
+/* Admin Section */
+.admin-section {
+    width: 100%;
+    border: 1px dashed rgba(99, 102, 241, 0.4);
+    border-radius: 0.75rem;
+    padding: 1rem 1.25rem 1.25rem;
+    background: rgba(99, 102, 241, 0.04);
+}
+
+.admin-section-label {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    font-size: 0.78rem;
+    font-weight: 600;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: #6366f1;
+}
+
+.lpx-theme-dark .admin-section {
+    border-color: rgba(167, 139, 250, 0.35);
+    background: rgba(167, 139, 250, 0.06);
+}
+
+.lpx-theme-dark .admin-section-label {
+    color: #a78bfa;
+}
+
+
+/* Hero */
+.hero-section {
+    background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 100%);
+    border: none;
+    border-radius: 1rem;
+}
+
+.hero-icon {
+    font-size: 3rem;
+    color: #4f46e5;
+    display: block;
+}
+
+.hero-title {
+    font-size: 2rem;
+    font-weight: 700;
+    color: #1e1e2e;
+}
+
+.hero-subtitle {
+    font-size: 1.1rem;
+}
+
+/* Feature Cards */
+.feature-card {
+    border: 1px solid #e9ecef;
+    border-radius: 0.75rem;
+    transition: box-shadow 0.2s, transform 0.2s;
+}
+
+.feature-card:hover {
+    box-shadow: 0 6px 24px rgba(79, 70, 229, 0.12);
+    transform: translateY(-3px);
+}
+
+.feature-icon {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #ede9fe, #dbeafe);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+    font-size: 1.4rem;
+    color: #4f46e5;
+}
+
+/* Dark mode */
+.lpx-theme-dark .hero-section {
+    background: linear-gradient(135deg, #1e1e3a 0%, #1a2540 100%);
+}
+
+.lpx-theme-dark .hero-title {
+    color: #f1f5f9;
+}
+
+.lpx-theme-dark .feature-card {
+    border-color: #2d3a4f;
+}
+
+.lpx-theme-dark .feature-icon {
+    background: linear-gradient(135deg, #2d2060, #1a3060);
+    color: #a78bfa;
+}

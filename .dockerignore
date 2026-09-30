@@ -1,0 +1,14 @@
+.git
+.vs
+.vscode
+.cursor
+.abpstudio
+**/bin
+**/obj
+**/Logs
+Learning.BFF.db
+Learning.BFF.db-shm
+Learning.BFF.db-wal
+etc/docker/certs
+README.md
+**/node_modules

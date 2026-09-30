@@ -1,0 +1,376 @@
+@page
+@model LearningBff.Pages.Admin.Exams.IndexModel
+@{
+    ViewData["Title"] = "Quản lý Đề thi";
+}
+
+<div class="admin-exams-page">
+    <div class="page-header">
+        <div class="page-title">
+            <i class="fas fa-file-alt"></i>
+            <h1>Quản lý Đề thi</h1>
+        </div>
+        <button class="btn-primary" onclick="openCreateModal()">
+            <i class="fas fa-plus"></i> Tạo đề thi
+        </button>
+    </div>
+
+    <div class="filter-bar">
+        <form method="get">
+            <select name="subjectId" onchange="this.form.submit()" class="filter-select">
+                <option value="">-- Tất cả môn học --</option>
+                @foreach (var s in Model.Subjects)
+                {
+                    <option value="@s.Id" selected="@(Model.SubjectFilter == s.Id)">@s.Name</option>
+                }
+            </select>
+        </form>
+    </div>
+
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    { <div class="alert alert-success"><i class="fas fa-check-circle"></i> @Model.SuccessMessage</div> }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    { <div class="alert alert-error"><i class="fas fa-exclamation-circle"></i> @Model.ErrorMessage</div> }
+
+    <div class="exams-table-wrapper">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Đề thi</th>
+                    <th>Môn học</th>
+                    <th>Thời gian</th>
+                    <th>Điểm</th>
+                    <th>Câu hỏi</th>
+                    <th>Trạng thái</th>
+                    <th>Thao tác</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var exam in Model.Exams)
+                {
+                    <tr>
+                        <td>
+                            <div class="exam-title-cell">
+                                <strong>@exam.Title</strong>
+                                @if (!string.IsNullOrEmpty(exam.Description))
+                                {
+                                    <small>@exam.Description</small>
+                                }
+                            </div>
+                        </td>
+                        <td><span class="badge badge-subject">@exam.SubjectName</span></td>
+                        <td>@exam.DurationInMinutes phút</td>
+                        <td>
+                            <span class="score-cell">@exam.PassScore / @exam.MaxScore</span>
+                        </td>
+                        <td>
+                            <a href="/Admin/Exams/Questions?examId=@exam.Id" class="badge badge-count">
+                                @exam.QuestionCount câu
+                            </a>
+                        </td>
+                        <td>
+                            @if (exam.IsPublished)
+                            {
+                                <span class="badge badge-published">Đã phát hành</span>
+                            }
+                            else
+                            {
+                                <span class="badge badge-draft">Nháp</span>
+                            }
+                        </td>
+                        <td>
+                            <div class="action-buttons">
+                                <a href="/Admin/Exams/Questions?examId=@exam.Id" class="btn-sm btn-info">
+                                    <i class="fas fa-list-ol"></i>
+                                </a>
+                                <button class="btn-sm btn-warning" onclick="editExam(@exam.Id)">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <form method="post" asp-page-handler="Delete" style="display:inline"
+                                      onsubmit="return confirm('Xóa đề thi @exam.Title?')">
+                                    <input type="hidden" name="id" value="@exam.Id" />
+                                    <button type="submit" class="btn-sm btn-danger"><i class="fas fa-trash"></i></button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                }
+                @if (!Model.Exams.Any())
+                {
+                    <tr><td colspan="7" class="empty-table">Chưa có đề thi nào.</td></tr>
+                }
+            </tbody>
+        </table>
+    </div>
+    @if (Model.TotalPages > 1)
+    {
+        <nav class="mt-4" aria-label="Phân trang đề thi">
+            <ul class="pagination align-items-center mb-0">
+                @if (Model.CurrentPage > 1)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-page="./Index" asp-route-subjectId="@Model.SubjectFilter" asp-route-page="@(Model.CurrentPage - 1)">Trước</a>
+                    </li>
+                }
+                <li class="page-item disabled"><span class="page-link">Trang @Model.CurrentPage / @Model.TotalPages · @Model.TotalCount đề thi</span></li>
+                @if (Model.CurrentPage < Model.TotalPages)
+                {
+                    <li class="page-item">
+                        <a class="page-link" asp-page="./Index" asp-route-subjectId="@Model.SubjectFilter" asp-route-page="@(Model.CurrentPage + 1)">Sau</a>
+                    </li>
+                }
+            </ul>
+        </nav>
+    }
+</div>
+
+<!-- Create Modal -->
+<div id="examModal" class="modal-overlay" style="display:none">
+    <div class="modal modal-large">
+        <div class="modal-header">
+            <h2 id="examModalTitle"><i class="fas fa-plus-circle"></i> Tạo đề thi</h2>
+            <button onclick="closeModal('examModal')" class="modal-close">&times;</button>
+        </div>
+        <form method="post" id="examForm">
+            <div class="modal-body">
+                <input type="hidden" name="Id" id="examId" value="0" />
+
+                <div class="form-row">
+                    <div class="form-group flex-2">
+                        <label>Tiêu đề <span class="required">*</span></label>
+                        <input type="text" name="Title" id="examTitle" required maxlength="256" />
+                    </div>
+                    <div class="form-group">
+                        <label>Môn học <span class="required">*</span></label>
+                        <select name="SubjectId" id="examSubjectId" required>
+                            @foreach (var s in Model.Subjects)
+                            {
+                                <option value="@s.Id">@s.Name</option>
+                            }
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Mô tả</label>
+                    <textarea name="Description" id="examDesc" rows="2" maxlength="1024"></textarea>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Thời gian (phút)</label>
+                        <input type="number" name="DurationInMinutes" id="examDuration" value="45" min="1" />
+                    </div>
+                    <div class="form-group">
+                        <label>Điểm qua môn</label>
+                        <input type="number" name="PassScore" id="examPassScore" value="5" min="0" step="0.1" />
+                    </div>
+                    <div class="form-group">
+                        <label>Thang điểm tối đa</label>
+                        <input type="number" name="MaxScore" id="examMaxScore" value="10" min="1" step="0.1" />
+                    </div>
+                    <div class="form-group">
+                        <label>Số lượt thi tối đa</label>
+                        <input type="number" name="MaxAttempts" id="examMaxAttempts" placeholder="Không giới hạn" min="1" />
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Bắt đầu</label>
+                        <input type="datetime-local" name="StartTime" id="examStartTime" />
+                    </div>
+                    <div class="form-group">
+                        <label>Kết thúc</label>
+                        <input type="datetime-local" name="EndTime" id="examEndTime" />
+                    </div>
+                </div>
+
+                <div class="form-row form-checks">
+                    <div class="form-check">
+                        <input type="checkbox" name="IsPublished" id="examIsPublished" value="true" />
+                        <label for="examIsPublished">Phát hành ngay</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" name="ShuffleQuestions" id="examShuffle" value="true" checked />
+                        <label for="examShuffle">Xáo trộn câu hỏi</label>
+                    </div>
+                    <div class="form-check">
+                        <input type="checkbox" name="ShuffleAnswers" id="examShuffleAns" value="true" checked />
+                        <label for="examShuffleAns">Xáo trộn đáp án</label>
+                    </div>
+                </div>
+
+                <div class="exam-question-picker">
+                    <div class="panel-header">
+                        <h2><i class="fas fa-list-ol"></i> Câu hỏi trong đề (<span id="selectedQuestionCount">0</span>)</h2>
+                    </div>
+                    <div id="selectedQuestions" class="modal-question-list"></div>
+                    <div class="question-bank-label"><i class="fas fa-database"></i> Ngân hàng câu hỏi</div>
+                    <div id="questionBank" class="modal-question-list"></div>
+                    <nav id="questionBankPagination" class="mt-3" aria-label="Phân trang chọn câu hỏi"></nav>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" onclick="closeModal('examModal')" class="btn-secondary">Hủy</button>
+                <button type="submit" class="btn-primary"><i class="fas fa-save"></i> Lưu</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+const examsData = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.Exams));
+let selectedQuestions = [];
+let questionBankItems = [];
+let questionBankPage = 1;
+let questionBankTotalPages = 1;
+let questionBankRequestId = 0;
+
+function valueOf(item, name) { return item[name] ?? item[name.charAt(0).toLowerCase() + name.slice(1)]; }
+
+function renderQuestionPicker() {
+    const selected = document.getElementById('selectedQuestions');
+    document.getElementById('selectedQuestionCount').textContent = selectedQuestions.length;
+    selected.innerHTML = selectedQuestions.length ? selectedQuestions.map((item, index) => `
+        <div class="modal-question-item selected-question">
+            <div class="eq-num">${index + 1}</div>
+            <div class="eq-content"><div class="eq-title">${item.title}</div><div class="eq-meta"><span>${item.subjectName}</span></div></div>
+            <label class="question-score">Điểm <input type="number" min="0" step="0.1" value="${item.score}" onchange="changeQuestionScore(${item.id}, this.value)"></label>
+            <button type="button" class="btn-icon btn-danger" title="Bỏ khỏi đề" onclick="removeQuestion(${item.id})"><i class="fas fa-minus-circle"></i></button>
+        </div>`).join('') : '<div class="empty-state"><p>Chưa chọn câu hỏi nào.</p></div>';
+    renderQuestionBank();
+}
+
+function renderQuestionBank() {
+    const bank = document.getElementById('questionBank');
+    const choices = questionBankItems;
+    bank.innerHTML = choices.length ? choices.map(q => {
+        const id = valueOf(q, 'Id'), added = selectedQuestions.some(item => item.id === id);
+        return `<div class="modal-question-item"><div class="eq-content"><div class="eq-title">${valueOf(q, 'Title')}</div><div class="eq-meta"><span>${valueOf(q, 'SubjectName')}</span><span><i class="fas fa-star"></i> ${valueOf(q, 'DefaultScore')} điểm</span></div></div>${added ? '<span class="badge badge-added"><i class="fas fa-check"></i> Đã thêm</span>' : `<button type="button" class="btn-icon btn-success" title="Thêm vào đề" onclick="addQuestion(${id})"><i class="fas fa-plus-circle"></i></button>`}</div>`;
+    }).join('') : '<div class="empty-state"><p>Không có câu hỏi phù hợp.</p></div>';
+    const pagination = document.getElementById('questionBankPagination');
+    pagination.innerHTML = questionBankTotalPages > 1 ? `
+        <ul class="pagination align-items-center mb-0">
+            ${questionBankPage > 1 ? '<li class="page-item"><button type="button" class="page-link" onclick="changeQuestionBankPage(-1)">Trước</button></li>' : ''}
+            <li class="page-item disabled"><span class="page-link">Trang ${questionBankPage} / ${questionBankTotalPages}</span></li>
+            ${questionBankPage < questionBankTotalPages ? '<li class="page-item"><button type="button" class="page-link" onclick="changeQuestionBankPage(1)">Sau</button></li>' : ''}
+        </ul>` : '';
+}
+
+async function loadQuestionBank(resetPage = false) {
+    const subjectId = Number(document.getElementById('examSubjectId').value);
+    if (!subjectId) {
+        questionBankItems = [];
+        questionBankPage = 1;
+        questionBankTotalPages = 1;
+        renderQuestionBank();
+        return;
+    }
+    if (resetPage) questionBankPage = 1;
+    const requestId = ++questionBankRequestId;
+    document.getElementById('questionBank').innerHTML = '<div class="empty-state"><p>Đang tải câu hỏi...</p></div>';
+    try {
+        const query = new URLSearchParams({ handler: 'QuestionPicker', subjectId: String(subjectId), page: String(questionBankPage) });
+        const response = await fetch(`${window.location.pathname}?${query}`);
+        if (!response.ok) throw new Error('Không thể tải câu hỏi.');
+        const result = await response.json();
+        if (requestId !== questionBankRequestId) return;
+        questionBankItems = result.items ?? result.Items ?? [];
+        questionBankPage = result.currentPage ?? result.CurrentPage ?? questionBankPage;
+        questionBankTotalPages = result.totalPages ?? result.TotalPages ?? 1;
+        renderQuestionBank();
+    } catch (error) {
+        if (requestId === questionBankRequestId) {
+            document.getElementById('questionBank').innerHTML = `<div class="empty-state"><p>${error.message}</p></div>`;
+            document.getElementById('questionBankPagination').innerHTML = '';
+        }
+    }
+}
+
+function changeQuestionBankPage(direction) {
+    questionBankPage += direction;
+    loadQuestionBank();
+}
+
+function addQuestion(id) {
+    const q = questionBankItems.find(item => valueOf(item, 'Id') === id);
+    if (!q || selectedQuestions.some(item => item.id === id)) return;
+    selectedQuestions.push({ id, title: valueOf(q, 'Title'), subjectId: valueOf(q, 'SubjectId'), subjectName: valueOf(q, 'SubjectName'), score: valueOf(q, 'DefaultScore') });
+    renderQuestionPicker();
+}
+function removeQuestion(id) { selectedQuestions = selectedQuestions.filter(item => item.id !== id); renderQuestionPicker(); }
+function changeQuestionScore(id, score) { const item = selectedQuestions.find(item => item.id === id); if (item) item.score = score || 0; }
+function writeQuestionsForSubmit() {
+    document.querySelectorAll('.selected-question-input').forEach(input => input.remove());
+    selectedQuestions.forEach((item, index) => {
+        ['QuestionId', 'Score', 'Order'].forEach((name, order) => {
+            const input = document.createElement('input'); input.type = 'hidden'; input.className = 'selected-question-input';
+            input.name = `Questions[${index}].${name}`; input.value = order === 0 ? item.id : order === 1 ? item.score : index + 1;
+            document.getElementById('examForm').appendChild(input);
+        });
+    });
+}
+
+function openCreateModal() {
+    document.getElementById('examModalTitle').innerHTML = '<i class="fas fa-plus-circle"></i> Tạo đề thi';
+    document.getElementById('examForm').action = '?handler=Create';
+    document.getElementById('examId').value = '0';
+    ['examTitle','examDesc','examStartTime','examEndTime','examMaxAttempts'].forEach(id => document.getElementById(id).value = '');
+    document.getElementById('examDuration').value = '45';
+    document.getElementById('examPassScore').value = '5';
+    document.getElementById('examMaxScore').value = '10';
+    document.getElementById('examIsPublished').checked = false;
+    document.getElementById('examShuffle').checked = true;
+    document.getElementById('examShuffleAns').checked = true;
+    selectedQuestions = [];
+    renderQuestionPicker();
+    document.getElementById('examModal').style.display = 'flex';
+    loadQuestionBank(true);
+    loadQuestionBank(true);
+}
+
+function editExam(id) {
+    const exam = examsData.find(e => (e.Id === id || e.id === id));
+    if (!exam) return;
+    document.getElementById('examModalTitle').innerHTML = '<i class="fas fa-edit"></i> Sửa đề thi';
+    document.getElementById('examForm').action = '?handler=Update';
+    document.getElementById('examId').value = exam.Id ?? exam.id ?? 0;
+    document.getElementById('examTitle').value = exam.Title ?? exam.title ?? '';
+    document.getElementById('examDesc').value = exam.Description ?? exam.description ?? '';
+    document.getElementById('examSubjectId').value = exam.SubjectId ?? exam.subjectId;
+    document.getElementById('examDuration').value = exam.DurationInMinutes ?? exam.durationInMinutes ?? 45;
+    document.getElementById('examPassScore').value = exam.PassScore ?? exam.passScore ?? 5;
+    document.getElementById('examMaxScore').value = exam.MaxScore ?? exam.maxScore ?? 10;
+    document.getElementById('examMaxAttempts').value = (exam.MaxAttempts ?? exam.maxAttempts) || '';
+    document.getElementById('examIsPublished').checked = !!(exam.IsPublished ?? exam.isPublished);
+    document.getElementById('examShuffle').checked = (exam.ShuffleQuestions ?? exam.shuffleQuestions) !== false;
+    document.getElementById('examShuffleAns').checked = (exam.ShuffleAnswers ?? exam.shuffleAnswers) !== false;
+
+    selectedQuestions = (exam.ExamQuestions ?? exam.examQuestions ?? []).map(q => ({
+        id: valueOf(q, 'QuestionId'), title: valueOf(q, 'QuestionTitle'), score: valueOf(q, 'Score'), subjectId: exam.SubjectId ?? exam.subjectId, subjectName: exam.SubjectName ?? exam.subjectName ?? ''
+    }));
+    renderQuestionPicker();
+
+    const startTime = exam.StartTime ?? exam.startTime;
+    const endTime = exam.EndTime ?? exam.endTime;
+    document.getElementById('examStartTime').value = startTime ? startTime.substring(0,16) : '';
+    document.getElementById('examEndTime').value   = endTime ? endTime.substring(0,16) : '';
+
+    document.getElementById('examModal').style.display = 'flex';
+}
+
+function closeModal(id) { document.getElementById(id).style.display = 'none'; }
+document.getElementById('examForm').addEventListener('submit', writeQuestionsForSubmit);
+document.getElementById('examSubjectId').addEventListener('change', () => {
+    const subjectId = Number(document.getElementById('examSubjectId').value);
+    selectedQuestions = selectedQuestions.filter(question => question.subjectId === subjectId);
+    renderQuestionPicker();
+    loadQuestionBank(true);
+});
+document.querySelectorAll('.modal-overlay').forEach(o => {
+    o.addEventListener('click', e => { if (e.target === o) o.style.display = 'none'; });
+});
+</script>
+}

@@ -1,0 +1,33 @@
+{
+  "Culture": "vi-VN",
+  "texts": {
+    "AppName": "Thi thử trắc nghiệm trực tuyến",
+    "Welcome_Title": "Chào mừng đến với Thi thử trắc nghiệm trực tuyến",
+    "Welcome_Text": "Đây là hệ thống thi thử trắc nghiệm trực tuyến",
+    "Login": "Đăng Nhập",
+    "Menu:Home": "Trang chủ",
+    "Menu:Admin": "Vùng Quản trị",
+    "Admin:Title": "Vùng Quản trị Hệ thống",
+    "Admin:Subtitle": "Bảng điều khiển trung tâm dành riêng cho Quản trị viên (Admin)",
+    "Admin:RestrictedNotice": "Khu vực được bảo mật cao cấp: Chỉ tài khoản có vai trò Admin mới có quyền truy cập.",
+    "Admin:Overview": "Tổng quan hệ thống",
+    "Admin:TotalUsers": "Tổng số Người dùng",
+    "Admin:TotalRoles": "Tổng số Vai trò",
+    "Admin:SecurityStatus": "Trạng thái bảo mật",
+    "Admin:SecurityLevel": "Tối đa (Admin Role)",
+    "Admin:QuickActions": "Lối tắt Quản trị",
+    "Admin:ManageUsers": "Quản lý Người dùng",
+    "Admin:ManageUsersDesc": "Xem danh sách, phân quyền, cấp mật khẩu và quản lý trạng thái tài khoản.",
+    "Admin:ManageRoles": "Quản lý Vai trò",
+    "Admin:ManageRolesDesc": "Thiết lập các vai trò người dùng và phân quyền chức năng chi tiết.",
+    "Admin:SystemSettings": "Cài đặt Hệ thống",
+    "Admin:SystemSettingsDesc": "Cấu hình bảo mật, gửi email, đa ngôn ngữ và các tùy chọn toàn hệ thống.",
+    "Admin:ApiDocs": "Tài liệu API (Swagger)",
+    "Admin:ApiDocsDesc": "Khám phá và kiểm thử trực tiếp các API RESTful của hệ thống.",
+    "Admin:HealthChecks": "Kiểm tra Sức khỏe",
+    "Admin:HealthChecksDesc": "Theo dõi hiệu năng, trạng thái cơ sở dữ liệu và các dịch vụ nền.",
+    "Admin:SystemInfo": "Thông tin Hệ thống",
+    "Admin:SessionInfo": "Phiên làm việc Hiện tại",
+    "Admin:AccessControlAudit": "Nhật ký Kiểm soát Truy cập (Access Control)"
+  }
+}

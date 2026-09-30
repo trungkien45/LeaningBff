@@ -1,0 +1,294 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@using LearningBff.Localization
+@using Volo.Abp.Users
+@using Volo.Abp.AspNetCore.Mvc.UI.Layout
+@using LearningBff.Menus
+@inject IHtmlLocalizer<LearningBffResource> L
+@model LearningBff.Pages.Admin.IndexModel
+@inject ICurrentUser CurrentUser
+@inject IPageLayout PageLayout
+@{
+    PageLayout.Content.Title = L["Admin:Title"].Value;
+    PageLayout.Content.BreadCrumb.Add(L["Menu:Admin"].Value);
+    PageLayout.Content.MenuItemName = LearningBffMenus.Admin;
+}
+
+@section styles {
+    <abp-style src="/Pages/Admin/Index.cshtml.css" />
+}
+
+<div class="admin-area-container">
+    <!-- Hero Banner -->
+    <div class="card admin-hero-card mb-4 border-0 shadow-sm">
+        <div class="card-body p-4 p-lg-5">
+            <div class="row align-items-center">
+                <div class="col-lg-8">
+                    <div class="d-flex align-items-center gap-2 mb-2">
+                        <span class="badge rounded-pill text-bg-danger px-3 py-2">
+                            <i class="fa-solid fa-lock me-1"></i> ADMIN ONLY
+                        </span>
+                        <span class="badge rounded-pill text-bg-success px-3 py-2">
+                            <i class="fa-solid fa-circle-check me-1"></i> Authorized: @Model.AdminRoles.FirstOrDefault()
+                        </span>
+                    </div>
+                    <h1 class="display-6 fw-bold mb-2 text-dark">
+                        <i class="fa-solid fa-shield-halved text-primary me-2"></i>@L["Admin:Title"]
+                    </h1>
+                    <p class="lead text-muted mb-3">@L["Admin:Subtitle"]</p>
+                    <div class="alert alert-warning d-inline-flex align-items-center py-2 px-3 mb-0" role="alert">
+                        <i class="fa-solid fa-triangle-exclamation me-2 fs-5"></i>
+                        <small>@L["Admin:RestrictedNotice"]</small>
+                    </div>
+                </div>
+                <div class="col-lg-4 text-lg-end mt-4 mt-lg-0">
+                    <div class="admin-profile-badge d-inline-block text-start p-3 rounded-3 shadow-sm border bg-white">
+                        <div class="d-flex align-items-center gap-3">
+                            <div class="admin-avatar text-center">
+                                <i class="fa-solid fa-user-gear fa-2x text-primary"></i>
+                            </div>
+                            <div>
+                                <div class="fw-bold text-dark">@Model.AdminUserName</div>
+                                <div class="small text-muted">@Model.AdminEmail</div>
+                                <span class="badge bg-primary-subtle text-primary border border-primary-subtle mt-1">
+                                    Role: @string.Join(", ", Model.AdminRoles)
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Stat Metrics Cards -->
+    <div class="row g-3 mb-4">
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card border-0 shadow-sm h-100">
+                <div class="card-body p-3 p-lg-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-icon bg-primary-subtle text-primary rounded-3">
+                            <i class="fa-solid fa-users fa-lg"></i>
+                        </span>
+                        <a href="/Identity/Users" class="btn btn-sm btn-outline-primary rounded-pill px-2">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div class="text-muted small text-uppercase fw-semibold">@L["Admin:TotalUsers"]</div>
+                    <div class="fs-2 fw-bold text-dark mt-1">@Model.TotalUsers</div>
+                    <small class="text-success"><i class="fa-solid fa-check me-1"></i>Tài khoản hệ thống</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card border-0 shadow-sm h-100">
+                <div class="card-body p-3 p-lg-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-icon bg-info-subtle text-info rounded-3">
+                            <i class="fa-solid fa-user-shield fa-lg"></i>
+                        </span>
+                        <a href="/Identity/Roles" class="btn btn-sm btn-outline-info rounded-pill px-2">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div class="text-muted small text-uppercase fw-semibold">@L["Admin:TotalRoles"]</div>
+                    <div class="fs-2 fw-bold text-dark mt-1">@Model.TotalRoles</div>
+                    <small class="text-info"><i class="fa-solid fa-shield me-1"></i>Vai trò quyền hạn</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card border-0 shadow-sm h-100">
+                <div class="card-body p-3 p-lg-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-icon bg-danger-subtle text-danger rounded-3">
+                            <i class="fa-solid fa-fingerprint fa-lg"></i>
+                        </span>
+                        <span class="badge bg-danger text-white rounded-pill px-2 py-1">Protected</span>
+                    </div>
+                    <div class="text-muted small text-uppercase fw-semibold">@L["Admin:SecurityStatus"]</div>
+                    <div class="fs-4 fw-bold text-dark mt-1">@L["Admin:SecurityLevel"]</div>
+                    <small class="text-danger"><i class="fa-solid fa-lock me-1"></i>Bảo vệ 2 tầng quyền</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-sm-6 col-xl-3">
+            <div class="card stat-card border-0 shadow-sm h-100">
+                <div class="card-body p-3 p-lg-4">
+                    <div class="d-flex align-items-center justify-content-between mb-3">
+                        <span class="stat-icon bg-success-subtle text-success rounded-3">
+                            <i class="fa-solid fa-server fa-lg"></i>
+                        </span>
+                        <a href="/health-checks" class="btn btn-sm btn-outline-success rounded-pill px-2">
+                            <i class="fa-solid fa-arrow-right"></i>
+                        </a>
+                    </div>
+                    <div class="text-muted small text-uppercase fw-semibold">Cơ sở dữ liệu</div>
+                    <div class="fs-4 fw-bold text-dark mt-1">SQLite Active</div>
+                    <small class="text-success"><i class="fa-solid fa-circle-dot me-1"></i>Kết nối ổn định</small>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Navigation Grid -->
+    <div class="card border-0 shadow-sm mb-4">
+        <div class="card-header bg-white border-bottom py-3">
+            <h5 class="card-title fw-bold mb-0 text-dark">
+                <i class="fa-solid fa-bolt text-warning me-2"></i>@L["Admin:QuickActions"]
+            </h5>
+        </div>
+        <div class="card-body p-4">
+            <div class="row g-3">
+                <div class="col-md-6 col-lg-4">
+                    <div class="action-card p-3 rounded-3 border h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="fa-solid fa-users text-primary fs-4"></i>
+                                <h6 class="fw-bold mb-0 text-dark">@L["Admin:ManageUsers"]</h6>
+                            </div>
+                            <p class="text-muted small mb-3">@L["Admin:ManageUsersDesc"]</p>
+                        </div>
+                        <a href="/Identity/Users" class="btn btn-outline-primary btn-sm w-100">
+                            <i class="fa-solid fa-up-right-from-square me-1"></i> Truy cập Quản lý Người dùng
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="action-card p-3 rounded-3 border h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="fa-solid fa-key text-info fs-4"></i>
+                                <h6 class="fw-bold mb-0 text-dark">@L["Admin:ManageRoles"]</h6>
+                            </div>
+                            <p class="text-muted small mb-3">@L["Admin:ManageRolesDesc"]</p>
+                        </div>
+                        <a href="/Identity/Roles" class="btn btn-outline-info btn-sm w-100">
+                            <i class="fa-solid fa-up-right-from-square me-1"></i> Truy cập Quản lý Vai trò
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <div class="action-card p-3 rounded-3 border h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="fa-solid fa-sliders text-secondary fs-4"></i>
+                                <h6 class="fw-bold mb-0 text-dark">@L["Admin:SystemSettings"]</h6>
+                            </div>
+                            <p class="text-muted small mb-3">@L["Admin:SystemSettingsDesc"]</p>
+                        </div>
+                        <a href="/SettingManagement" class="btn btn-outline-secondary btn-sm w-100">
+                            <i class="fa-solid fa-up-right-from-square me-1"></i> Truy cập Cài đặt
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-6">
+                    <div class="action-card p-3 rounded-3 border h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="fa-solid fa-code text-success fs-4"></i>
+                                <h6 class="fw-bold mb-0 text-dark">@L["Admin:ApiDocs"]</h6>
+                            </div>
+                            <p class="text-muted small mb-3">@L["Admin:ApiDocsDesc"]</p>
+                        </div>
+                        <a href="/swagger" target="_blank" class="btn btn-outline-success btn-sm w-100">
+                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Mở Swagger API Explorer
+                        </a>
+                    </div>
+                </div>
+
+                <div class="col-md-6 col-lg-6">
+                    <div class="action-card p-3 rounded-3 border h-100 d-flex flex-column justify-content-between">
+                        <div>
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <i class="fa-solid fa-heart-pulse text-danger fs-4"></i>
+                                <h6 class="fw-bold mb-0 text-dark">@L["Admin:HealthChecks"]</h6>
+                            </div>
+                            <p class="text-muted small mb-3">@L["Admin:HealthChecksDesc"]</p>
+                        </div>
+                        <a href="/health-checks" target="_blank" class="btn btn-outline-danger btn-sm w-100">
+                            <i class="fa-solid fa-arrow-up-right-from-square me-1"></i> Mở Trang Sức khỏe Hệ thống
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Security & Diagnostic Details -->
+    <div class="row g-4">
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="card-title fw-bold mb-0 text-dark">
+                        <i class="fa-solid fa-user-lock text-primary me-2"></i>@L["Admin:AccessControlAudit"]
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">Chính sách Thư mục (Folder Policy):</span>
+                            <span class="badge bg-dark">AuthorizeFolder("/Admin", "AdminOnly")</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">Phân quyền Trang (PageModel Attribute):</span>
+                            <span class="badge bg-primary">[Authorize(Roles = "admin")]</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">Xác thực Yêu cầu:</span>
+                            <span class="badge bg-success">Role: admin (Đã xác thực)</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">Hành động khi không có quyền:</span>
+                            <span class="badge bg-danger">Chặn truy cập (HTTP 403 Forbidden)</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">Chưa đăng nhập:</span>
+                            <span class="badge bg-warning text-dark">Redirect -> /Account/Login</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="card border-0 shadow-sm h-100">
+                <div class="card-header bg-white border-bottom py-3">
+                    <h5 class="card-title fw-bold mb-0 text-dark">
+                        <i class="fa-solid fa-circle-info text-info me-2"></i>@L["Admin:SystemInfo"]
+                    </h5>
+                </div>
+                <div class="card-body p-4">
+                    <ul class="list-group list-group-flush">
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">Hệ điều hành máy chủ:</span>
+                            <span class="fw-semibold text-dark text-truncate ms-2" style="max-width: 250px;">@Model.OsDescription</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">Framework Runtime:</span>
+                            <span class="badge bg-secondary">@Model.FrameworkDescription</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">Tên máy chủ (Host):</span>
+                            <span class="fw-semibold text-dark">@Model.MachineName</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">ABP Framework:</span>
+                            <span class="badge bg-primary">v10.6.0</span>
+                        </li>
+                        <li class="list-group-item d-flex justify-content-between align-items-center px-0 py-3">
+                            <span class="text-muted">Thời gian Server (UTC):</span>
+                            <span class="fw-semibold text-dark">@Model.ServerTime.ToString("yyyy-MM-dd HH:mm:ss")</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

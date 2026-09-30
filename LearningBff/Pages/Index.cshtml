@@ -1,0 +1,121 @@
+@page
+@using Microsoft.AspNetCore.Mvc.Localization
+@using LearningBff.Localization
+@using Volo.Abp.Users
+@using Volo.Abp.AspNetCore.Mvc.UI.Layout;
+@using LearningBff.Menus;
+@inject IHtmlLocalizer<LearningBffResource> L
+@model LearningBff.Pages.IndexModel
+@inject ICurrentUser CurrentUser
+@inject IPageLayout PageLayout
+@{
+    PageLayout.Content.Title = L["Menu:Home"].Value;
+
+
+
+    PageLayout.Content.BreadCrumb.ShowCurrent = false;
+
+
+
+    PageLayout.Content.ShowToolbar = false;
+
+
+
+    PageLayout.Content.MenuItemName = LearningBffMenus.Home;
+}
+
+@section styles {
+    <abp-style src="/Pages/Index.cshtml.css" />
+}
+@section scripts {
+    <abp-script src="/Pages/Index.cshtml.js" />
+}
+
+<div class="home-page">
+    @* Hero Section *@
+    <div class="hero-section card mb-4">
+        <div class="card-body text-center py-5">
+            <i class="fa-solid fa-graduation-cap hero-icon mb-3"></i>
+            <h1 class="hero-title mb-2">Hệ thống thi thử trắc nghiệm trực tuyến</h1>
+            <p class="hero-subtitle text-muted mb-4">Nền tảng tổ chức thi thử trắc nghiệm và quản lý bài thi hiệu quả, chuyên
+                nghiệp.</p>
+
+            @if (!CurrentUser.IsAuthenticated)
+            {
+                <a href="/Account/Login" class="btn btn-primary btn-lg px-5">
+                    <i class="fa-solid fa-right-to-bracket me-2"></i>Đăng nhập để bắt đầu
+                </a>
+            }
+            else if (CurrentUser.IsInRole("admin"))
+            {
+                <div class="admin-section mb-3">
+                    <div class="admin-section-label mb-2">
+                        <i class="fa-solid fa-shield-halved me-1"></i>Dành cho Quản trị viên
+                    </div>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="/Admin" class="btn btn-primary btn-lg px-4">
+                            <i class="fa-solid fa-gauge-high me-2"></i>Vào trang Quản trị
+                        </a>
+                        <a href="/Admin/Exams" class="btn btn-outline-primary btn-lg px-4">
+                            <i class="fa-solid fa-list-check me-2"></i>Danh sách bài thi
+                        </a>
+                    </div>
+                </div>
+            }
+            @if (CurrentUser.IsAuthenticated)
+            {
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="/Exam" class="btn btn-primary btn-lg px-4">
+                        <i class="fa-solid fa-pen-to-square me-2"></i>Danh sách bài thi
+                    </a>
+                </div>
+            }
+        </div>
+    </div>
+
+    @* Feature Cards *@
+    <div class="row g-4 mb-4">
+        <div class="col-md-4">
+            <div class="card feature-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fa-solid fa-clock-rotate-left"></i>
+                    </div>
+                    <h5 class="card-title">Thi mọi lúc</h5>
+                    <p class="card-text text-muted">Làm bài thi trắc nghiệm trực tuyến linh hoạt theo lịch trình của bạn, mọi nơi
+                        mọi lúc.</p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fa-solid fa-chart-line"></i>
+                    </div>
+                    <h5 class="card-title">Kết quả tức thì</h5>
+                    <p class="card-text text-muted">Xem kết quả và đánh giá chi tiết ngay sau khi hoàn thành bài thi.
+                    </p>
+                </div>
+            </div>
+        </div>
+        <div class="col-md-4">
+            <div class="card feature-card h-100">
+                <div class="card-body text-center p-4">
+                    <div class="feature-icon mb-3">
+                        <i class="fa-solid fa-shield-halved"></i>
+                    </div>
+                    <h5 class="card-title">An toàn & Bảo mật</h5>
+                    <p class="card-text text-muted">Hệ thống xác thực nghiêm ngặt, đảm bảo tính công bằng và minh bạch.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    @* ABP Copyright Footer *@
+    <div class="text-center text-muted py-3" style="font-size: 0.85rem;">
+        Được xây dựng trên nền tảng <a href="https://abp.io" target="_blank" class="text-muted">ABP Framework</a>.
+        &copy; @DateTime.Now.Year LearningBff. All rights reserved.
+    </div>
+</div>

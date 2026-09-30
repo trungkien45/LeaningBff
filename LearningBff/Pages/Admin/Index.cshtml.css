@@ -1,0 +1,61 @@
+.admin-area-container {
+    padding-bottom: 2rem;
+}
+
+.admin-hero-card {
+    background: linear-gradient(135deg, #f8f9fc 0%, #eef2f7 100%);
+    border-radius: 1rem;
+    border: 1px solid #e3e8ee !important;
+}
+
+.admin-hero-card h1 {
+    letter-spacing: -0.02em;
+}
+
+.admin-profile-badge {
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05), 0 2px 4px -1px rgba(0, 0, 0, 0.03);
+}
+
+.admin-avatar {
+    width: 52px;
+    height: 52px;
+    background: #eef2ff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.stat-card {
+    border-radius: 0.85rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    border: 1px solid #edf2f7 !important;
+}
+
+.stat-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -2px rgba(0, 0, 0, 0.04) !important;
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.action-card {
+    background-color: #fbfcfe;
+    transition: all 0.2s ease;
+    border: 1px solid #e2e8f0 !important;
+}
+
+.action-card:hover {
+    background-color: #ffffff;
+    border-color: #3b82f6 !important;
+    box-shadow: 0 4px 12px rgba(59, 130, 246, 0.08);
+    transform: translateY(-2px);
+}
