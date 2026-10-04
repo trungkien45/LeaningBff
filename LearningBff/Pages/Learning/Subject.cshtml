@@ -1,0 +1,456 @@
+@page
+@model LearningBff.Pages.Learning.SubjectModel
+@{
+    ViewData["Title"] = Model.CurrentSubject != null ? $"Học — {Model.CurrentSubject.Name}" : "Học trực tuyến";
+}
+
+<style>
+    :root {
+        --learn-primary: #4f46e5;
+        --learn-primary-rgb: 79, 70, 229;
+        --learn-secondary: #06b6d4;
+        --learn-bg: #f8fafc;
+        --learn-card-bg: #ffffff;
+        --learn-border: #e2e8f0;
+        --learn-text-main: #0f172a;
+        --learn-text-muted: #64748b;
+        --learn-success: #10b981;
+    }
+
+    .learning-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem 1rem;
+    }
+
+    /* Classroom Header */
+    .classroom-header {
+        background: #ffffff;
+        border-radius: 1rem;
+        border: 1px solid var(--learn-border);
+        padding: 1.25rem 1.75rem;
+        margin-bottom: 1.5rem;
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    }
+    .classroom-grid {
+        display: grid;
+        grid-template-columns: 360px 1fr;
+        gap: 1.5rem;
+        align-items: start;
+    }
+    @@media (max-width: 992px) {
+        .classroom-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Sidebar Curriculum */
+    .curriculum-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        border: 1px solid var(--learn-border);
+        box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+        overflow: hidden;
+        position: sticky;
+        top: 85px;
+        max-height: calc(100vh - 110px);
+        display: flex;
+        flex-direction: column;
+    }
+    .curriculum-header {
+        padding: 1rem 1.25rem;
+        border-bottom: 1px solid var(--learn-border);
+        background: #f8fafc;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    .curriculum-scroll {
+        overflow-y: auto;
+        padding: 0.75rem;
+        flex: 1;
+    }
+    .chapter-item {
+        border-radius: 0.75rem;
+        border: 1px solid var(--learn-border);
+        margin-bottom: 0.75rem;
+        overflow: hidden;
+        background: #ffffff;
+    }
+    .chapter-title-btn {
+        width: 100%;
+        text-align: left;
+        background: #f8fafc;
+        border: none;
+        padding: 0.85rem 1rem;
+        font-weight: 700;
+        font-size: 0.95rem;
+        color: var(--learn-text-main);
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .chapter-title-btn:hover {
+        background: #f1f5f9;
+    }
+    .lesson-item-btn {
+        width: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.75rem 1rem;
+        border: none;
+        border-bottom: 1px solid #f1f5f9;
+        background: #ffffff;
+        text-align: left;
+        font-size: 0.9rem;
+        color: var(--learn-text-main);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    .lesson-item-btn:last-child {
+        border-bottom: none;
+    }
+    .lesson-item-btn:hover {
+        background-color: #f8fafc;
+        color: var(--learn-primary);
+    }
+    .lesson-item-btn.active {
+        background-color: #eef2ff;
+        color: var(--learn-primary);
+        font-weight: 600;
+        border-left: 4px solid var(--learn-primary);
+    }
+    .lesson-check-icon {
+        font-size: 1rem;
+        color: #cbd5e1;
+        transition: color 0.2s;
+    }
+    .lesson-check-icon.completed {
+        color: #10b981;
+    }
+
+    /* Progress bar in header */
+    .course-progress-bar {
+        height: 10px;
+        border-radius: 9999px;
+        background-color: #e2e8f0;
+        overflow: hidden;
+        margin: 0;
+    }
+    .course-progress-fill {
+        height: 100%;
+        background: linear-gradient(90deg, #10b981 0%, #06b6d4 100%);
+        border-radius: 9999px;
+        transition: width 0.5s ease;
+    }
+
+    /* Lesson Content Card */
+    .lesson-viewer-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        border: 1px solid var(--learn-border);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.03);
+        padding: 2.25rem;
+        min-height: 550px;
+        display: flex;
+        flex-direction: column;
+    }
+    .lesson-content-body {
+        font-size: 1.05rem;
+        line-height: 1.75;
+        color: #334155;
+        margin: 1.75rem 0;
+        flex: 1;
+    }
+    .lesson-content-body h1, .lesson-content-body h2, .lesson-content-body h3 {
+        color: #0f172a;
+        font-weight: 700;
+        margin-top: 1.5rem;
+        margin-bottom: 0.75rem;
+    }
+    .lesson-content-body p { margin-bottom: 1rem; }
+    .lesson-content-body pre {
+        background: #0f172a;
+        color: #f8fafc;
+        padding: 1.25rem;
+        border-radius: 0.75rem;
+        overflow-x: auto;
+    }
+    .lesson-content-body blockquote {
+        border-left: 4px solid var(--learn-primary);
+        padding-left: 1rem;
+        font-style: italic;
+        color: #475569;
+        margin: 1rem 0;
+    }
+    .btn-complete-lesson {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        font-weight: 600;
+        padding: 0.65rem 1.25rem;
+        border-radius: 0.5rem;
+        transition: all 0.2s ease;
+    }
+
+    /* Empty state */
+    .empty-lesson-state {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        flex: 1;
+        text-align: center;
+        padding: 4rem 2rem;
+        color: var(--learn-text-muted);
+    }
+</style>
+
+<div class="learning-container">
+    @if (Model.CurrentSubject == null)
+    {
+        <div class="text-center py-5">
+            <i class="fas fa-exclamation-circle fa-3x text-danger mb-3"></i>
+            <h3 class="fw-bold">Không tìm thấy môn học</h3>
+            <p class="text-muted mb-4">Môn học không tồn tại hoặc bạn chưa đăng ký.</p>
+            <a href="/Learning" class="btn btn-primary px-4">
+                <i class="fas fa-arrow-left me-1"></i> Quay về danh sách môn học
+            </a>
+        </div>
+    }
+    else
+    {
+        @* CLASSROOM HEADER *@
+        <div class="classroom-header">
+            <div class="d-flex align-items-center gap-3">
+                <a href="/Learning" class="btn btn-outline-secondary btn-sm rounded-circle p-2"
+                   title="Quay lại danh sách môn học"
+                   style="width: 36px; height: 36px; display: inline-flex; align-items: center; justify-content: center;">
+                    <i class="fas fa-arrow-left"></i>
+                </a>
+                <div>
+                    <h1 class="h4 fw-bold mb-1">@Model.CurrentSubject.Name</h1>
+                    <div class="d-flex align-items-center gap-2 small text-muted">
+                        @if (Model.CurrentSubject.Teachers.Any())
+                        {
+                            <span><i class="fas fa-user-tie text-primary"></i> GV: @string.Join(", ", Model.CurrentSubject.Teachers.Select(t => t.Name ?? t.UserName))</span>
+                            <span>•</span>
+                        }
+                        <span><i class="fas fa-book"></i> @Model.CurrentSubject.TotalLessons bài học</span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="d-flex align-items-center gap-3">
+                <div class="text-end d-none d-sm-block">
+                    <div class="small fw-semibold text-muted">Tiến độ môn học:</div>
+                    <div class="fw-bold text-success">@Model.CurrentSubject.ProgressPercentage% (@Model.CurrentSubject.CompletedLessons/@Model.CurrentSubject.TotalLessons)</div>
+                </div>
+                <div class="course-progress-bar d-none d-sm-block" style="width: 120px;">
+                    <div class="course-progress-fill" style="width: @Model.CurrentSubject.ProgressPercentage%;"></div>
+                </div>
+            </div>
+        </div>
+
+        @* CLASSROOM GRID *@
+        <div class="classroom-grid">
+            @* LEFT: CURRICULUM SIDEBAR *@
+            <div class="curriculum-card">
+                <div class="curriculum-header">
+                    <h2 class="h6 fw-bold mb-0"><i class="fas fa-list-ol text-primary me-2"></i> Nội dung môn học</h2>
+                    <span class="badge bg-light text-dark border">@Model.CurrentSubject.Chapters.Count Chương</span>
+                </div>
+                <div class="curriculum-scroll">
+                    @if (!Model.CurrentSubject.Chapters.Any())
+                    {
+                        <div class="p-3 text-center text-muted small">Môn học đang được cập nhật chương bài giảng.</div>
+                    }
+
+                    @foreach (var ch in Model.CurrentSubject.Chapters)
+                    {
+                        <div class="chapter-item">
+                            <button type="button" class="chapter-title-btn"
+                                    data-bs-toggle="collapse" data-bs-target="#chapterCollapse-@ch.Id" aria-expanded="true">
+                                <span><i class="fas fa-folder-open text-primary me-2"></i> @ch.Name</span>
+                                <span class="badge bg-secondary opacity-75 small">@ch.CompletedLessons/@ch.TotalLessons</span>
+                            </button>
+                            <div class="collapse show" id="chapterCollapse-@ch.Id">
+                                @foreach (var lesson in ch.Lessons)
+                                {
+                                    var isActive = Model.CurrentLesson != null && Model.CurrentLesson.Id == lesson.Id;
+                                    <a href="/Learning/Subject?subjectId=@Model.CurrentSubject.Id&lessonId=@lesson.Id"
+                                       class="lesson-item-btn @(isActive ? "active" : "")">
+                                        <div class="d-flex align-items-center gap-2 text-truncate pe-2">
+                                            <i class="fas fa-play-circle @(isActive ? "text-primary" : "text-muted")" style="font-size: 0.85rem;"></i>
+                                            <span class="text-truncate" title="@lesson.Title">@lesson.Title</span>
+                                        </div>
+                                        <i class="fas fa-check-circle lesson-check-icon @(lesson.IsCompleted ? "completed" : "")" id="icon-lesson-@lesson.Id"></i>
+                                    </a>
+                                }
+
+                                @foreach (var exam in ch.ChapterExams)
+                                {
+                                    <div class="p-2 border-top bg-light d-flex align-items-center justify-content-between">
+                                        <div class="small fw-semibold text-truncate pe-2" title="@exam.Title">
+                                            <i class="fas fa-file-signature text-warning me-1"></i> @exam.Title
+                                        </div>
+                                        <form method="post" asp-page="/Exam/Index" asp-page-handler="StartExam">
+                                            <input type="hidden" name="examId" value="@exam.Id" />
+                                            <button type="submit" class="btn btn-warning btn-sm px-2 py-0 fw-bold" style="font-size: 0.75rem;">
+                                                Thi ngay
+                                            </button>
+                                        </form>
+                                    </div>
+                                }
+                            </div>
+                        </div>
+                    }
+
+                    @if (Model.CurrentSubject.SubjectExams.Any())
+                    {
+                        <div class="card bg-primary text-white p-3 rounded-3 mt-3 border-0 shadow-sm">
+                            <h3 class="h6 fw-bold mb-2"><i class="fas fa-award me-1"></i> Đề thi kết thúc môn</h3>
+                            @foreach (var ex in Model.CurrentSubject.SubjectExams)
+                            {
+                                <div class="d-flex align-items-center justify-content-between mt-2 pt-2 border-top border-white border-opacity-25">
+                                    <span class="small text-truncate" title="@ex.Title">@ex.Title (@ex.DurationInMinutes p)</span>
+                                    <form method="post" asp-page="/Exam/Index" asp-page-handler="StartExam">
+                                        <input type="hidden" name="examId" value="@ex.Id" />
+                                        <button type="submit" class="btn btn-light btn-sm fw-bold px-2 py-0 text-primary">Vào thi</button>
+                                    </form>
+                                </div>
+                            }
+                        </div>
+                    }
+                </div>
+            </div>
+
+            @* RIGHT: LESSON VIEWER *@
+            <div class="lesson-viewer-card">
+                @if (Model.CurrentLesson != null)
+                {
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 border-bottom">
+                        <div>
+                            <span class="badge bg-primary bg-opacity-10 text-primary mb-1">
+                                <i class="fas fa-folder me-1"></i> @Model.CurrentLesson.ChapterName
+                            </span>
+                            <h2 class="h3 fw-bold mb-0">@Model.CurrentLesson.Title</h2>
+                        </div>
+                        <div>
+                            <button type="button" id="btnToggleComplete"
+                                    class="btn @(Model.CurrentLesson.IsCompleted ? "btn-success" : "btn-outline-success") btn-complete-lesson shadow-sm"
+                                    onclick="toggleLessonComplete(@Model.CurrentLesson.Id)">
+                                <i class="fas @(Model.CurrentLesson.IsCompleted ? "fa-check-circle" : "fa-circle")" id="btnCompleteIcon"></i>
+                                <span id="btnCompleteText">@(Model.CurrentLesson.IsCompleted ? "Đã hoàn thành" : "Đánh dấu hoàn thành")</span>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="lesson-content-body">
+                        @if (!string.IsNullOrWhiteSpace(Model.CurrentLesson.Content))
+                        {
+                            @Html.Raw(Model.CurrentLesson.Content)
+                        }
+                        else
+                        {
+                            <div class="alert alert-light border p-4 text-center my-4 rounded-3">
+                                <i class="fas fa-file-alt fa-3x text-muted opacity-50 mb-3"></i>
+                                <p class="mb-0 text-muted">Nội dung bài học đang được biên tập và cập nhật bởi giảng viên.</p>
+                            </div>
+                        }
+                    </div>
+
+                    <div class="d-flex align-items-center justify-content-between pt-3 border-top mt-auto">
+                        @if (Model.CurrentLesson.PreviousLessonId.HasValue)
+                        {
+                            <a href="/Learning/Subject?subjectId=@Model.CurrentSubject.Id&lessonId=@Model.CurrentLesson.PreviousLessonId.Value"
+                               class="btn btn-outline-secondary">
+                                <i class="fas fa-chevron-left me-1"></i> Bài trước
+                            </a>
+                        }
+                        else
+                        {
+                            <div></div>
+                        }
+
+                        @if (Model.CurrentLesson.NextLessonId.HasValue)
+                        {
+                            <a href="/Learning/Subject?subjectId=@Model.CurrentSubject.Id&lessonId=@Model.CurrentLesson.NextLessonId.Value"
+                               class="btn btn-primary fw-semibold px-4">
+                                Bài tiếp theo <i class="fas fa-chevron-right ms-1"></i>
+                            </a>
+                        }
+                        else
+                        {
+                            <a href="/Learning" class="btn btn-success fw-semibold px-4">
+                                Hoàn tất môn học <i class="fas fa-trophy ms-1"></i>
+                            </a>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-lesson-state">
+                        <i class="fas fa-book-open fa-4x text-muted opacity-50 mb-3"></i>
+                        <h3 class="fw-bold mb-2">Chào mừng bạn đến với khóa học</h3>
+                        <p class="text-muted mx-auto mb-4" style="max-width: 500px;">
+                            Hãy chọn một bài học từ danh mục bên trái để bắt đầu học tập và theo dõi tiến độ của bạn.
+                        </p>
+                    </div>
+                }
+            </div>
+        </div>
+    }
+</div>
+
+@section scripts {
+    <script>
+        function toggleLessonComplete(lessonId) {
+            var token = $('input[name="__RequestVerificationToken"]').val();
+            var btn = $('#btnToggleComplete');
+            var btnIcon = $('#btnCompleteIcon');
+            var btnText = $('#btnCompleteText');
+            var iconLesson = $('#icon-lesson-' + lessonId);
+
+            btn.prop('disabled', true);
+
+            $.ajax({
+                url: '/Learning/Subject?handler=ToggleLesson',
+                type: 'POST',
+                data: { lessonId: lessonId },
+                headers: { "RequestVerificationToken": token },
+                success: function (res) {
+                    if (res && res.success) {
+                        if (res.isCompleted) {
+                            btn.removeClass('btn-outline-success').addClass('btn-success');
+                            btnIcon.removeClass('fa-circle').addClass('fa-check-circle');
+                            btnText.text('Đã hoàn thành');
+                            iconLesson.addClass('completed');
+                        } else {
+                            btn.removeClass('btn-success').addClass('btn-outline-success');
+                            btnIcon.removeClass('fa-check-circle').addClass('fa-circle');
+                            btnText.text('Đánh dấu hoàn thành');
+                            iconLesson.removeClass('completed');
+                        }
+                    } else {
+                        alert(res.message || 'Có lỗi xảy ra.');
+                    }
+                },
+                error: function () {
+                    alert('Lỗi kết nối máy chủ.');
+                },
+                complete: function () {
+                    btn.prop('disabled', false);
+                }
+            });
+        }
+    </script>
+}
