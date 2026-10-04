@@ -51,6 +51,45 @@
         align-items: center;
         gap: 0.35rem;
     }
+    /* Pager */
+    .pager {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 2rem;
+        gap: 1rem;
+    }
+    .pager-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1.25rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: 1.5px solid #e2e8f0;
+        background: #fff;
+        color: #334155;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .pager-btn:hover:not(.disabled) {
+        background: #3b82f6;
+        border-color: #3b82f6;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(59,130,246,0.25);
+        text-decoration: none;
+    }
+    .pager-btn.disabled {
+        opacity: 0.38;
+        pointer-events: none;
+    }
+    .pager-info {
+        font-size: 0.875rem;
+        color: #64748b;
+        font-weight: 500;
+    }
 </style>
 
 <div class="container py-4">
@@ -62,7 +101,7 @@
             </div>
             <div class="col-lg-4 text-lg-end">
                 <span class="badge bg-primary bg-opacity-25 border border-primary px-3 py-2 fs-6">
-                    Đã đăng ký: <strong>@Model.Subjects.Count(s => s.IsEnrolled)</strong> / @Model.Subjects.Count môn
+                    Tìm thấy: <strong>@Model.TotalCount</strong> môn học
                 </span>
             </div>
         </div>
@@ -175,5 +214,23 @@
                 </div>
             }
         </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            var prevUrl = $"/Subjects?page={Model.CurrentPage - 1}{(!string.IsNullOrEmpty(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search)}" : "")}";
+            var nextUrl = $"/Subjects?page={Model.CurrentPage + 1}{(!string.IsNullOrEmpty(Model.Search) ? $"&search={Uri.EscapeDataString(Model.Search)}" : "")}";
+            <div class="pager">
+                <a href="@prevUrl" class="pager-btn @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                    <i class="fas fa-chevron-left"></i> Trước
+                </a>
+                <span class="pager-info">
+                    Trang <strong>@Model.CurrentPage</strong> / <strong>@Model.TotalPages</strong>
+                    &nbsp;·&nbsp; @Model.TotalCount môn học
+                </span>
+                <a href="@nextUrl" class="pager-btn @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                    Tiếp <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        }
     }
 </div>

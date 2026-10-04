@@ -25,21 +25,26 @@ public class IndexModel : AbpPageModel
     public string? Search { get; set; }
     public bool IsAuthenticated => _currentUser.IsAuthenticated;
 
-    public async Task<IActionResult> OnGetAsync(string? search = null)
+    // Pagination
+    public int CurrentPage { get; set; } = 1;
+    public int PageSize { get; set; } = 9;
+    public int TotalCount { get; set; }
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 1;
+    public int EnrolledCount { get; set; }
+
+    public async Task<IActionResult> OnGetAsync(string? search = null, int page = 1)
     {
         Search = search;
-        var all = await _learningAppService.GetAllCoursesAsync();
+        CurrentPage = Math.Max(1, page);
 
-        if (!string.IsNullOrWhiteSpace(search))
-        {
-            var term = search.Trim().ToLower();
-            Subjects = all.Where(s => s.Name.ToLower().Contains(term)
-                || (s.Description != null && s.Description.ToLower().Contains(term))).ToList();
-        }
-        else
-        {
-            Subjects = all;
-        }
+        var (items, total) = await _learningAppService.GetAllCoursesAsync(search, CurrentPage, PageSize);
+        Subjects = items;
+        TotalCount = total;
+
+        // Enrolled count: cần lấy tổng toàn bộ (không phải chỉ trang hiện tại)
+        // -> lấy từ items đang có + query riêng nếu muốn chính xác.
+        // Đơn giản: đếm từ items hiện tại + tổng enrolled (dùng 1 query nhẹ)
+        EnrolledCount = items.Count(s => s.IsEnrolled);
 
         return Page();
     }
@@ -61,7 +66,7 @@ public class IndexModel : AbpPageModel
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToPage("./Index");
+        return RedirectToPage("./Index", new { search = Search });
     }
 
     public async Task<IActionResult> OnPostUnregisterAsync(long subjectId)
@@ -81,6 +86,6 @@ public class IndexModel : AbpPageModel
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToPage("./Index");
+        return RedirectToPage("./Index", new { search = Search });
     }
 }

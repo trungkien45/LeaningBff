@@ -24,14 +24,25 @@ public class IndexModel : AbpPageModel
     public List<SubjectCardDto> MyCourses { get; set; } = new();
     public bool IsAuthenticated => _currentUser.IsAuthenticated;
 
-    public async Task<IActionResult> OnGetAsync()
+    // Pagination
+    public int CurrentPage { get; set; } = 1;
+    public int PageSize { get; set; } = 9;
+    public int TotalCount { get; set; }
+    public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 1;
+
+    public async Task<IActionResult> OnGetAsync(int page = 1)
     {
         if (!IsAuthenticated)
         {
             return Redirect("/Account/Login");
         }
 
-        MyCourses = await _learningAppService.GetMyCoursesAsync();
+        CurrentPage = Math.Max(1, page);
+
+        var (items, total) = await _learningAppService.GetMyCoursesAsync(CurrentPage, PageSize);
+        MyCourses = items;
+        TotalCount = total;
+
         return Page();
     }
 
@@ -44,9 +55,9 @@ public class IndexModel : AbpPageModel
 
         try
         {
-            // Chỉ cho phép hủy nếu chưa học bài nào
-            var courses = await _learningAppService.GetMyCoursesAsync();
-            var course = courses.FirstOrDefault(c => c.Id == subjectId);
+            // Lấy info môn học để kiểm tra tiến độ (dùng page 1 tìm trong tất cả)
+            var (allCourses, _) = await _learningAppService.GetMyCoursesAsync(1, int.MaxValue);
+            var course = allCourses.FirstOrDefault(c => c.Id == subjectId);
 
             if (course == null)
             {

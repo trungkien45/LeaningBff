@@ -329,6 +329,45 @@
         color: #1e40af;
         margin: 0;
     }
+
+    /* Pagination */
+    .pagination {
+        gap: 0.25rem;
+    }
+    .pagination .page-link {
+        color: #334155;
+        border-color: #cbd5e1;
+        background-color: #ffffff;
+        padding: 0.35rem 0.65rem;
+        border-radius: 0.5rem !important;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 32px;
+        height: 32px;
+        text-decoration: none;
+    }
+    .pagination .page-link:hover {
+        background-color: #eef2ff;
+        border-color: #a5b4fc;
+        color: var(--teach-primary);
+    }
+    .pagination .page-item.active .page-link {
+        background-color: var(--teach-primary);
+        border-color: var(--teach-primary);
+        color: #ffffff;
+        box-shadow: 0 4px 6px -1px rgba(99, 102, 241, 0.3);
+    }
+    .pagination .page-item.disabled .page-link {
+        color: #94a3b8;
+        background-color: #f8fafc;
+        border-color: #e2e8f0;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
 </style>
 
 <div class="teacher-container">
@@ -432,21 +471,74 @@
         <div class="dashboard-main">
             <!-- Môn học đang giảng dạy -->
             <div class="dash-panel">
-                <div class="dash-panel-header">
-                    <h2 class="dash-panel-title">
-                        <i class="fas fa-layer-group text-primary"></i>
-                        <span>Thống kê theo môn học</span>
-                    </h2>
-                    <a href="~/Teacher/Subjects" class="btn btn-sm btn-outline-secondary">
-                        Chi tiết <i class="fas fa-arrow-right ms-1"></i>
-                    </a>
+                <div class="dash-panel-header flex-wrap gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <h2 class="dash-panel-title">
+                            <i class="fas fa-layer-group text-primary"></i>
+                            <span>Thống kê theo môn học</span>
+                        </h2>
+                        <span class="badge bg-light text-secondary border">
+                            @if (!string.IsNullOrWhiteSpace(Model.DashboardData.SubjectSearch))
+                            {
+                                <span>@Model.DashboardData.SubjectTotalCount kết quả</span>
+                            }
+                            else
+                            {
+                                <span>@Model.DashboardData.SubjectTotalCount môn</span>
+                            }
+                        </span>
+                    </div>
+
+                    <!-- Search Form -->
+                    <form method="get" class="d-flex align-items-center gap-2" style="max-width: 320px; width: 100%;">
+                        <input type="hidden" name="currentPage" value="1" />
+                        <div class="input-group input-group-sm">
+                            <span class="input-group-text bg-white border-end-0"><i class="fas fa-search text-muted"></i></span>
+                            <input type="text" 
+                                   name="search" 
+                                   class="form-control border-start-0 ps-0" 
+                                   placeholder="Tìm theo tên môn học..." 
+                                   value="@Model.DashboardData.SubjectSearch">
+                            @if (!string.IsNullOrWhiteSpace(Model.DashboardData.SubjectSearch))
+                            {
+                                <a href="~/Teacher" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
+                                    <i class="fas fa-times"></i>
+                                </a>
+                            }
+                            <button type="submit" class="btn btn-primary fw-semibold px-3">Tìm</button>
+                        </div>
+                    </form>
                 </div>
+
+                @if (!string.IsNullOrWhiteSpace(Model.DashboardData.SubjectSearch))
+                {
+                    <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-light rounded border border-primary border-opacity-25">
+                        <div class="small text-muted">
+                            <i class="fas fa-filter text-primary me-1"></i>
+                            Đang lọc môn học theo tên: <strong class="text-primary">"@Model.DashboardData.SubjectSearch"</strong>
+                            &mdash; Tìm thấy <strong>@Model.DashboardData.SubjectTotalCount</strong> môn học
+                        </div>
+                        <a href="~/Teacher" class="btn btn-sm btn-link text-danger text-decoration-none p-0 fw-semibold">
+                            <i class="fas fa-times-circle me-1"></i> Bỏ lọc
+                        </a>
+                    </div>
+                }
 
                 @if (!Model.DashboardData.SubjectStats.Any())
                 {
                     <div class="text-center py-4 text-muted">
                         <i class="fas fa-folder-open fa-3x mb-2 text-secondary" style="opacity: 0.4;"></i>
-                        <p class="mb-0">Chưa có dữ liệu môn học hoặc bạn chưa được gán môn học nào.</p>
+                        @if (!string.IsNullOrWhiteSpace(Model.DashboardData.SubjectSearch))
+                        {
+                            <p class="mb-2 fw-semibold text-dark">Không tìm thấy môn học nào khớp với từ khóa "@Model.DashboardData.SubjectSearch"</p>
+                            <a href="~/Teacher" class="btn btn-outline-primary btn-sm mt-1">
+                                <i class="fas fa-arrow-left me-1"></i> Xem tất cả môn học
+                            </a>
+                        }
+                        else
+                        {
+                            <p class="mb-0">Chưa có dữ liệu môn học hoặc bạn chưa được gán môn học nào.</p>
+                        }
                     </div>
                 }
                 else
@@ -492,6 +584,71 @@
                                 }
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Phân trang môn học -->
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-3 mt-3 border-top">
+                        <div class="text-muted small">
+                            Hiển thị <span class="fw-semibold text-dark">@Model.DashboardData.SubjectStartIndex</span> - <span class="fw-semibold text-dark">@Model.DashboardData.SubjectEndIndex</span> trên <span class="fw-semibold text-dark">@Model.DashboardData.SubjectTotalCount</span> môn học
+                        </div>
+
+                        @if (Model.DashboardData.SubjectTotalPages > 1)
+                        {
+                            <nav aria-label="Phân trang môn học">
+                                <ul class="pagination pagination-sm mb-0">
+                                    <li class="page-item @(Model.DashboardData.SubjectCurrentPage <= 1 ? "disabled" : "")">
+                                        <a class="page-link" href="?currentPage=1&search=@Model.DashboardData.SubjectSearch" title="Trang đầu">
+                                            <i class="fas fa-angles-left"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item @(Model.DashboardData.SubjectCurrentPage <= 1 ? "disabled" : "")">
+                                        <a class="page-link" href="?currentPage=@(Model.DashboardData.SubjectCurrentPage - 1)&search=@Model.DashboardData.SubjectSearch" title="Trang trước">
+                                            <i class="fas fa-angle-left"></i>
+                                        </a>
+                                    </li>
+
+                                    @if (Model.DashboardData.SubjectStartPage > 1)
+                                    {
+                                        <li class="page-item">
+                                            <a class="page-link" href="?currentPage=1&search=@Model.DashboardData.SubjectSearch">1</a>
+                                        </li>
+                                        @if (Model.DashboardData.SubjectStartPage > 2)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                        }
+                                    }
+
+                                    @for (int p = Model.DashboardData.SubjectStartPage; p <= Model.DashboardData.SubjectEndPage; p++)
+                                    {
+                                        <li class="page-item @(p == Model.DashboardData.SubjectCurrentPage ? "active" : "")">
+                                            <a class="page-link" href="?currentPage=@p&search=@Model.DashboardData.SubjectSearch">@p</a>
+                                        </li>
+                                    }
+
+                                    @if (Model.DashboardData.SubjectEndPage < Model.DashboardData.SubjectTotalPages)
+                                    {
+                                        @if (Model.DashboardData.SubjectEndPage < Model.DashboardData.SubjectTotalPages - 1)
+                                        {
+                                            <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                        }
+                                        <li class="page-item">
+                                            <a class="page-link" href="?currentPage=@Model.DashboardData.SubjectTotalPages&search=@Model.DashboardData.SubjectSearch">@Model.DashboardData.SubjectTotalPages</a>
+                                        </li>
+                                    }
+
+                                    <li class="page-item @(Model.DashboardData.SubjectCurrentPage >= Model.DashboardData.SubjectTotalPages ? "disabled" : "")">
+                                        <a class="page-link" href="?currentPage=@(Model.DashboardData.SubjectCurrentPage + 1)&search=@Model.DashboardData.SubjectSearch" title="Trang sau">
+                                            <i class="fas fa-angle-right"></i>
+                                        </a>
+                                    </li>
+                                    <li class="page-item @(Model.DashboardData.SubjectCurrentPage >= Model.DashboardData.SubjectTotalPages ? "disabled" : "")">
+                                        <a class="page-link" href="?currentPage=@Model.DashboardData.SubjectTotalPages&search=@Model.DashboardData.SubjectSearch" title="Trang cuối">
+                                            <i class="fas fa-angles-right"></i>
+                                        </a>
+                                    </li>
+                                </ul>
+                            </nav>
+                        }
                     </div>
                 }
             </div>

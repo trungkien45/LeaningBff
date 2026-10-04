@@ -2,6 +2,19 @@
 @model LearningBff.Pages.Exam.IndexModel
 @{
     ViewData["Title"] = "Thi trắc nghiệm trực tuyến";
+    // Helper: build URL giữ nguyên params, chỉ thay 1 param
+    string PageUrl(string paramName, int value)
+    {
+        var q = new Dictionary<string, string?>
+        {
+            ["tab"] = Model.ActiveTab,
+            ["examPage"] = Model.ExamCurrentPage.ToString(),
+            ["historyPage"] = Model.HistoryCurrentPage.ToString(),
+        };
+        if (Model.SelectedSubjectId.HasValue) q["subjectId"] = Model.SelectedSubjectId.Value.ToString();
+        q[paramName] = value.ToString();
+        return "/Exam?" + string.Join("&", q.Select(kv => $"{kv.Key}={kv.Value}"));
+    }
 }
 
 <style>
@@ -80,6 +93,46 @@
         color: #b91c1c;
         border: 2px solid #fca5a5;
     }
+    /* Pagination */
+    .pager {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 1.5rem;
+        gap: 1rem;
+    }
+    .pager-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1.25rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: 1.5px solid #e2e8f0;
+        background: #fff;
+        color: #334155;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .pager-btn:hover:not(.disabled) {
+        background: #4f46e5;
+        border-color: #4f46e5;
+        color: #fff;
+        box-shadow: 0 4px 12px rgba(79,70,229,0.25);
+        text-decoration: none;
+    }
+    .pager-btn.disabled {
+        opacity: 0.38;
+        pointer-events: none;
+        cursor: default;
+    }
+    .pager-info {
+        font-size: 0.875rem;
+        color: #64748b;
+        font-weight: 500;
+    }
 </style>
 
 <div class="container py-4">
@@ -122,25 +175,25 @@
         </div>
     }
 
-    @* TABS: ĐỀ THI ĐANG MỞ & LỊCH SỬ THI *@
+    @* TABS *@
     <ul class="nav nav-pills mb-4 gap-2" id="examTabs" role="tablist">
         <li class="nav-item">
             <a class="nav-link @(Model.ActiveTab == "exams" ? "active" : "") fw-bold px-4 py-2 rounded-pill shadow-sm"
                href="/Exam?tab=exams@(Model.SelectedSubjectId.HasValue ? $"&subjectId={Model.SelectedSubjectId.Value}" : "")">
-                <i class="fas fa-file-alt me-1"></i> Đề thi đang mở (@Model.ActiveExams.Count)
+                <i class="fas fa-file-alt me-1"></i> Đề thi đang mở (@Model.ExamTotalCount)
             </a>
         </li>
         <li class="nav-item">
             <a class="nav-link @(Model.ActiveTab == "history" ? "active" : "") fw-bold px-4 py-2 rounded-pill shadow-sm"
                href="/Exam?tab=history@(Model.SelectedSubjectId.HasValue ? $"&subjectId={Model.SelectedSubjectId.Value}" : "")">
-                <i class="fas fa-history me-1"></i> Lịch sử làm bài (@Model.MyHistory.Count)
+                <i class="fas fa-history me-1"></i> Lịch sử làm bài (@Model.HistoryTotalCount)
             </a>
         </li>
     </ul>
 
     @if (Model.ActiveTab == "exams")
     {
-        @if (!Model.ActiveExams.Any())
+        @if (Model.ExamTotalCount == 0)
         {
             <div class="card p-5 text-center border-0 shadow-sm rounded-4 my-4">
                 <i class="fas fa-calendar-check fa-3x text-muted opacity-50 mb-3"></i>
@@ -217,12 +270,30 @@
                     </div>
                 }
             </div>
+
+            @if (Model.ExamTotalPages > 1)
+            {
+                <div class="pager">
+                    <a href="@PageUrl("examPage", Model.ExamCurrentPage - 1)"
+                       class="pager-btn @(Model.ExamCurrentPage <= 1 ? "disabled" : "")">
+                        <i class="fas fa-chevron-left"></i> Trước
+                    </a>
+                    <span class="pager-info">
+                        Trang <strong>@Model.ExamCurrentPage</strong> / <strong>@Model.ExamTotalPages</strong>
+                        &nbsp;·&nbsp; @Model.ExamTotalCount đề thi
+                    </span>
+                    <a href="@PageUrl("examPage", Model.ExamCurrentPage + 1)"
+                       class="pager-btn @(Model.ExamCurrentPage >= Model.ExamTotalPages ? "disabled" : "")">
+                        Tiếp <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            }
         }
     }
     else
     {
         @* TAB: LỊCH SỬ THI *@
-        @if (!Model.MyHistory.Any())
+        @if (Model.HistoryTotalCount == 0)
         {
             <div class="card p-5 text-center border-0 shadow-sm rounded-4 my-4">
                 <i class="fas fa-history fa-3x text-muted opacity-50 mb-3"></i>
@@ -265,6 +336,24 @@
                     </div>
                 }
             </div>
+
+            @if (Model.HistoryTotalPages > 1)
+            {
+                <div class="pager">
+                    <a href="@PageUrl("historyPage", Model.HistoryCurrentPage - 1)"
+                       class="pager-btn @(Model.HistoryCurrentPage <= 1 ? "disabled" : "")">
+                        <i class="fas fa-chevron-left"></i> Trước
+                    </a>
+                    <span class="pager-info">
+                        Trang <strong>@Model.HistoryCurrentPage</strong> / <strong>@Model.HistoryTotalPages</strong>
+                        &nbsp;·&nbsp; @Model.HistoryTotalCount lượt thi
+                    </span>
+                    <a href="@PageUrl("historyPage", Model.HistoryCurrentPage + 1)"
+                       class="pager-btn @(Model.HistoryCurrentPage >= Model.HistoryTotalPages ? "disabled" : "")">
+                        Tiếp <i class="fas fa-chevron-right"></i>
+                    </a>
+                </div>
+            }
         }
     }
 </div>

@@ -25,7 +25,10 @@ public class ExamAppService : LearningBffAppService
     /// <summary>
     /// Danh sách các đề thi đang mở cho học viên
     /// </summary>
-    public async Task<List<ExamSummaryDto>> GetPublishedExamsAsync(long? subjectId = null)
+    public async Task<(List<ExamSummaryDto> Items, int TotalCount)> GetPublishedExamsAsync(
+        long? subjectId = null,
+        int page = 1,
+        int pageSize = 9)
     {
         var userId = _currentUser.Id;
         var now = DateTime.UtcNow;
@@ -34,9 +37,6 @@ public class ExamAppService : LearningBffAppService
             .Where(e => e.IsPublished
                 && (e.StartTime == null || e.StartTime <= now)
                 && (e.EndTime == null || e.EndTime >= now))
-            .Include(e => e.Subject)
-            .Include(e => e.Chapter)
-            .Include(e => e.ExamQuestions)
             .AsQueryable();
 
         if (subjectId.HasValue)
@@ -44,15 +44,27 @@ public class ExamAppService : LearningBffAppService
             query = query.Where(e => e.SubjectId == subjectId.Value);
         }
 
+        var totalCount = await query.CountAsync();
+
+        var safePage = Math.Max(1, page);
+        var totalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 1;
+        if (totalPages > 0 && safePage > totalPages) safePage = totalPages;
+
         var exams = await query
             .OrderByDescending(e => e.CreationTime)
+            .Skip((safePage - 1) * pageSize)
+            .Take(pageSize)
+            .Include(e => e.Subject)
+            .Include(e => e.Chapter)
+            .Include(e => e.ExamQuestions)
             .ToListAsync();
 
         var attemptsDict = new Dictionary<long, int>();
         if (userId.HasValue)
         {
+            var pagedIds = exams.Select(e => e.Id).ToList();
             attemptsDict = await _db.ExamResults.AsNoTracking()
-                .Where(r => r.UserId == userId.Value && r.Status == ExamResultStatus.Submitted)
+                .Where(r => r.UserId == userId.Value && r.Status == ExamResultStatus.Submitted && pagedIds.Contains(r.ExamId))
                 .GroupBy(r => r.ExamId)
                 .Select(g => new { ExamId = g.Key, Count = g.Count() })
                 .ToDictionaryAsync(x => x.ExamId, x => x.Count);
@@ -88,7 +100,7 @@ public class ExamAppService : LearningBffAppService
             });
         }
 
-        return result;
+        return (result, totalCount);
     }
 
     /// <summary>
@@ -110,19 +122,19 @@ public class ExamAppService : LearningBffAppService
     /// <summary>
     /// Lịch sử kết quả làm bài của học viên hiện tại
     /// </summary>
-    public async Task<List<ExamResultDto>> GetMyExamHistoryAsync(long? subjectId = null)
+    public async Task<(List<ExamResultDto> Items, int TotalCount)> GetMyExamHistoryAsync(
+        long? subjectId = null,
+        int page = 1,
+        int pageSize = 8)
     {
         var userId = _currentUser.Id;
         if (!userId.HasValue)
         {
-            return new List<ExamResultDto>();
+            return (new List<ExamResultDto>(), 0);
         }
 
         var query = _db.ExamResults.AsNoTracking()
             .Where(r => r.UserId == userId.Value && r.Status == ExamResultStatus.Submitted)
-            .Include(r => r.Exam)
-                .ThenInclude(e => e!.Subject)
-            .Include(r => r.ExamResultAnswers)
             .AsQueryable();
 
         if (subjectId.HasValue)
@@ -130,11 +142,22 @@ public class ExamAppService : LearningBffAppService
             query = query.Where(r => r.Exam != null && r.Exam.SubjectId == subjectId.Value);
         }
 
+        var totalCount = await query.CountAsync();
+
+        var safePage = Math.Max(1, page);
+        var totalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 1;
+        if (totalPages > 0 && safePage > totalPages) safePage = totalPages;
+
         var list = await query
             .OrderByDescending(r => r.SubmitTime ?? r.CreationTime)
+            .Skip((safePage - 1) * pageSize)
+            .Take(pageSize)
+            .Include(r => r.Exam)
+                .ThenInclude(e => e!.Subject)
+            .Include(r => r.ExamResultAnswers)
             .ToListAsync();
 
-        return list.Select(r => new ExamResultDto
+        var items = list.Select(r => new ExamResultDto
         {
             Id = r.Id,
             ExamId = r.ExamId,
@@ -152,6 +175,8 @@ public class ExamAppService : LearningBffAppService
             TotalQuestions = r.ExamResultAnswers.Select(a => a.QuestionId).Distinct().Count(),
             CorrectQuestions = r.ExamResultAnswers.Where(a => a.IsCorrect).Select(a => a.QuestionId).Distinct().Count()
         }).ToList();
+
+        return (items, totalCount);
     }
 
     /// <summary>

@@ -197,6 +197,43 @@
         from { opacity: 0; transform: scale(0.93); }
         to   { opacity: 1; transform: scale(1); }
     }
+    /* Pager */
+    .pager {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-top: 2rem;
+        gap: 1rem;
+    }
+    .pager-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.5rem 1.25rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        border: 1.5px solid rgba(255,255,255,0.25);
+        background: rgba(255,255,255,0.1);
+        color: #fff;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        backdrop-filter: blur(4px);
+    }
+    .pager-btn:hover:not(.disabled) {
+        background: rgba(255,255,255,0.25);
+        color: #fff;
+        text-decoration: none;
+    }
+    .pager-btn.disabled {
+        opacity: 0.35;
+        pointer-events: none;
+    }
+    .pager-info {
+        font-size: 0.875rem;
+        color: rgba(255,255,255,0.75);
+        font-weight: 500;
+    }
 </style>
 
 @if (TempData["Success"] != null)
@@ -224,7 +261,7 @@
                 <p class="learn-hero-desc">Chào mừng bạn quay trở lại! Tiếp tục hoàn thành các bài học và thử sức với các bài thi trắc nghiệm để củng cố kiến thức vững vàng.</p>
                 <div class="d-flex flex-wrap gap-2">
                     <span class="learn-stat-badge">
-                        <i class="fas fa-book-open"></i> @Model.MyCourses.Count Môn học đang tham gia
+                        <i class="fas fa-book-open"></i> @Model.TotalCount Môn học đang tham gia
                     </span>
                     <span class="learn-stat-badge">
                         <i class="fas fa-check-circle text-success"></i> @Model.MyCourses.Sum(c => c.CompletedLessons) Bài học đã hoàn thành
@@ -260,7 +297,7 @@
     {
         <div class="d-flex align-items-center justify-content-between mb-4">
             <h2 class="h4 fw-bold mb-0"><i class="fas fa-chalkboard-teacher text-primary me-2"></i> Môn học của bạn</h2>
-            <span class="text-muted small">@Model.MyCourses.Count môn học</span>
+            <span class="text-muted small">@Model.TotalCount môn học</span>
         </div>
 
         <div class="row g-4">
@@ -330,6 +367,22 @@
                 </div>
             }
         </div>
+
+        @if (Model.TotalPages > 1)
+        {
+            <div class="pager">
+                <a href="/Learning?page=@(Model.CurrentPage - 1)" class="pager-btn @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                    <i class="fas fa-chevron-left"></i> Trước
+                </a>
+                <span class="pager-info">
+                    Trang <strong>@Model.CurrentPage</strong> / <strong>@Model.TotalPages</strong>
+                    &nbsp;·&nbsp; @Model.TotalCount môn học
+                </span>
+                <a href="/Learning?page=@(Model.CurrentPage + 1)" class="pager-btn @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                    Tiếp <i class="fas fa-chevron-right"></i>
+                </a>
+            </div>
+        }
     }
 </div>
 

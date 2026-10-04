@@ -14,15 +14,66 @@ namespace LearningBff.Pages.Admin;
 public class SubjectsModel : AbpPageModel
 {
     private readonly SubjectAppService _subjectAppService;
+    private readonly SubjectAdminAppService _subjectAdminAppService;
 
-    public SubjectsModel(SubjectAppService subjectAppService)
+    public SubjectsModel(
+        SubjectAppService subjectAppService,
+        SubjectAdminAppService subjectAdminAppService)
     {
         _subjectAppService = subjectAppService;
+        _subjectAdminAppService = subjectAdminAppService;
     }
 
     public List<SubjectDto> Subjects { get; set; } = new();
     public List<TeacherSimpleDto> AvailableTeachers { get; set; } = new();
+
+    [BindProperty(SupportsGet = true)]
     public string? Search { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public int CurrentPage { get; set; } = 1;
+
+    public int PageSize { get; set; } = 10;
+    public long TotalCount { get; set; }
+    public int TotalPages { get; set; }
+
+    public int StartIndex => TotalCount == 0 ? 0 : (CurrentPage - 1) * PageSize + 1;
+    public int EndIndex => (int)Math.Min(CurrentPage * PageSize, TotalCount);
+
+    public int StartPage
+    {
+        get
+        {
+            const int maxDisplay = 5;
+            int start = Math.Max(1, CurrentPage - maxDisplay / 2);
+            int end = Math.Min(TotalPages, start + maxDisplay - 1);
+            if (end - start + 1 < maxDisplay)
+            {
+                start = Math.Max(1, end - maxDisplay + 1);
+            }
+            return start;
+        }
+    }
+
+    public int EndPage
+    {
+        get
+        {
+            const int maxDisplay = 5;
+            int start = Math.Max(1, CurrentPage - maxDisplay / 2);
+            int end = Math.Min(TotalPages, start + maxDisplay - 1);
+            if (end - start + 1 < maxDisplay)
+            {
+                end = Math.Min(TotalPages, start + maxDisplay - 1);
+            }
+            return end;
+        }
+    }
+
+    public int TotalSystemSubjects { get; set; }
+    public int ActiveSystemSubjects { get; set; }
+    public int AssignedSystemSubjects { get; set; }
+    public int UnassignedSystemSubjects { get; set; }
 
     [TempData]
     public string? SuccessMessage { get; set; }
@@ -30,23 +81,37 @@ public class SubjectsModel : AbpPageModel
     [TempData]
     public string? ErrorMessage { get; set; }
 
-    public async Task OnGetAsync(string? search = null)
+    public async Task OnGetAsync(string? search = null, int currentPage = 1)
     {
         Search = search;
-        var all = await _subjectAppService.GetListAsync();
+        CurrentPage = currentPage < 1 ? 1 : currentPage;
 
-        if (!string.IsNullOrWhiteSpace(search))
+        var stats = await _subjectAdminAppService.GetAdminStatsAsync();
+        TotalSystemSubjects = stats.Total;
+        ActiveSystemSubjects = stats.Active;
+        AssignedSystemSubjects = stats.Assigned;
+        UnassignedSystemSubjects = stats.Unassigned;
+
+        var pagedResult = await _subjectAppService.GetPagedListAsync(
+            searchName: Search,
+            skipCount: (CurrentPage - 1) * PageSize,
+            maxResultCount: PageSize
+        );
+
+        TotalCount = pagedResult.TotalCount;
+        TotalPages = (int)Math.Ceiling((double)TotalCount / PageSize);
+
+        if (TotalPages > 0 && CurrentPage > TotalPages)
         {
-            var term = search.Trim().ToLower();
-            Subjects = all.Where(s => s.Name.ToLower().Contains(term)
-                || (s.Description != null && s.Description.ToLower().Contains(term))
-                || s.Teachers.Any(t => t.DisplayName.ToLower().Contains(term))).ToList();
-        }
-        else
-        {
-            Subjects = all;
+            CurrentPage = TotalPages;
+            pagedResult = await _subjectAppService.GetPagedListAsync(
+                searchName: Search,
+                skipCount: (CurrentPage - 1) * PageSize,
+                maxResultCount: PageSize
+            );
         }
 
+        Subjects = pagedResult.Items.ToList();
         AvailableTeachers = await _subjectAppService.GetAvailableTeachersAsync();
     }
 
@@ -54,11 +119,12 @@ public class SubjectsModel : AbpPageModel
         string name,
         string? description,
         bool isActive = false,
-        List<Guid>? teacherIds = null)
+        List<Guid>? teacherIds = null,
+        string? search = null)
     {
         try
         {
-            await _subjectAppService.CreateAsync(new CreateSubjectDto
+            await _subjectAdminAppService.CreateAsync(new CreateSubjectDto
             {
                 Name = name,
                 Description = description,
@@ -73,7 +139,7 @@ public class SubjectsModel : AbpPageModel
             ErrorMessage = ex.Message;
         }
 
-        return RedirectToPage();
+        return RedirectToPage(new { search });
     }
 
     public async Task<IActionResult> OnPostUpdateAsync(
@@ -81,11 +147,13 @@ public class SubjectsModel : AbpPageModel
         string name,
         string? description,
         bool isActive = false,
-        List<Guid>? teacherIds = null)
+        List<Guid>? teacherIds = null,
+        string? search = null,
+        int currentPage = 1)
     {
         try
         {
-            await _subjectAppService.UpdateAsync(id, new UpdateSubjectDto
+            await _subjectAdminAppService.UpdateAsync(id, new UpdateSubjectDto
             {
                 Name = name,
                 Description = description,
@@ -100,16 +168,18 @@ public class SubjectsModel : AbpPageModel
             ErrorMessage = ex.Message;
         }
 
-        return RedirectToPage();
+        return RedirectToPage(new { search, currentPage });
     }
 
     public async Task<IActionResult> OnPostAssignTeachersAsync(
         long subjectId,
-        List<Guid>? teacherIds = null)
+        List<Guid>? teacherIds = null,
+        string? search = null,
+        int currentPage = 1)
     {
         try
         {
-            await _subjectAppService.AssignTeachersAsync(subjectId, teacherIds ?? new List<Guid>());
+            await _subjectAdminAppService.AssignTeachersAsync(subjectId, teacherIds ?? new List<Guid>());
             SuccessMessage = "Đã cập nhật danh sách giảng viên phụ trách môn học.";
         }
         catch (Exception ex)
@@ -117,14 +187,17 @@ public class SubjectsModel : AbpPageModel
             ErrorMessage = ex.Message;
         }
 
-        return RedirectToPage();
+        return RedirectToPage(new { search, currentPage });
     }
 
-    public async Task<IActionResult> OnPostDeleteAsync(long id)
+    public async Task<IActionResult> OnPostDeleteAsync(
+        long id,
+        string? search = null,
+        int currentPage = 1)
     {
         try
         {
-            await _subjectAppService.DeleteAsync(id);
+            await _subjectAdminAppService.DeleteAsync(id);
             SuccessMessage = "Đã xóa môn học thành công.";
         }
         catch (Exception ex)
@@ -132,6 +205,6 @@ public class SubjectsModel : AbpPageModel
             ErrorMessage = ex.Message;
         }
 
-        return RedirectToPage();
+        return RedirectToPage(new { search, currentPage });
     }
 }

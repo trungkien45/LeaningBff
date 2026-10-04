@@ -69,7 +69,7 @@ public class LearningBffMenuContributor : IMenuContributor
         );
 
         var currentUser = context.ServiceProvider.GetRequiredService<ICurrentUser>();
-        if (currentUser.IsInRole("teacher") || currentUser.IsInRole("Teacher") || currentUser.IsInRole("admin") || currentUser.IsInRole("Admin"))
+        if (currentUser.IsInRole("teacher") || currentUser.IsInRole("Teacher"))
         {
             var teacherMenu = new ApplicationMenuItem(
                 LearningBffMenus.Teacher,
@@ -106,7 +106,7 @@ public class LearningBffMenuContributor : IMenuContributor
                 icon: "fas fa-file-alt"
             ));
 
-            context.Menu.Items.Insert(3, teacherMenu);
+            context.Menu.Items.Add(teacherMenu);
         }
 
         if (currentUser.IsInRole("admin") || currentUser.IsInRole("Admin"))

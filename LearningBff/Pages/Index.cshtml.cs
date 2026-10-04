@@ -26,7 +26,8 @@ public class IndexModel : AbpPageModel
     {
         if (IsAuthenticated)
         {
-            MyCourses = await _learningAppService.GetMyCoursesAsync();
+            var (courses, _) = await _learningAppService.GetMyCoursesAsync();
+            MyCourses = courses;
         }
 
         return Page();

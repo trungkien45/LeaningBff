@@ -25,16 +25,29 @@ public class LearningAppService : LearningBffAppService
     /// <summary>
     /// Danh sách các môn học mà học viên hiện tại đã đăng ký
     /// </summary>
-    public async Task<List<SubjectCardDto>> GetMyCoursesAsync()
+    public async Task<(List<SubjectCardDto> Items, int TotalCount)> GetMyCoursesAsync(
+        int page = 1,
+        int pageSize = 9)
     {
         var userId = _currentUser.Id;
         if (!userId.HasValue)
         {
-            return new List<SubjectCardDto>();
+            return (new List<SubjectCardDto>(), 0);
         }
 
-        var enrollments = await _db.EnrollmentSubjects.AsNoTracking()
-            .Where(e => e.UserId == userId.Value && e.IsActive)
+        var enrollQuery = _db.EnrollmentSubjects.AsNoTracking()
+            .Where(e => e.UserId == userId.Value && e.IsActive);
+
+        var totalCount = await enrollQuery.CountAsync();
+
+        var safePage = Math.Max(1, page);
+        var totalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 1;
+        if (totalPages > 0 && safePage > totalPages) safePage = totalPages;
+
+        var enrollments = await enrollQuery
+            .OrderByDescending(e => e.RegisteredAt)
+            .Skip((safePage - 1) * pageSize)
+            .Take(pageSize)
             .Include(e => e.Subject)
                 .ThenInclude(s => s!.Chapters)
                     .ThenInclude(c => c.Lessons)
@@ -42,12 +55,11 @@ public class LearningAppService : LearningBffAppService
                 .ThenInclude(s => s!.Teachers)
             .Include(e => e.Subject)
                 .ThenInclude(s => s!.Exams)
-            .OrderByDescending(e => e.RegisteredAt)
             .ToListAsync();
 
-        var subjectIds = enrollments.Select(e => e.SubjectId).ToList();
+        var pagedSubjectIds = enrollments.Select(e => e.SubjectId).ToList();
 
-        // Get completed lessons for this user
+        // Load completed lesson IDs của user cho các môn trong trang hiện tại
         var completedLessonIds = await _db.LearningProgesses.AsNoTracking()
             .Where(lp => lp.UserId == userId.Value && lp.IsCompleted)
             .Select(lp => lp.LessonId)
@@ -87,30 +99,53 @@ public class LearningAppService : LearningBffAppService
             });
         }
 
-        return result;
+        return (result, totalCount);
     }
 
     /// <summary>
     /// Tất cả môn học cho học viên khám phá và đăng ký
     /// </summary>
-    public async Task<List<SubjectCardDto>> GetAllCoursesAsync()
+    public async Task<(List<SubjectCardDto> Items, int TotalCount)> GetAllCoursesAsync(
+        string? search = null,
+        int page = 1,
+        int pageSize = 9)
     {
         var userId = _currentUser.Id;
 
-        var subjects = await _db.Subjects.AsNoTracking()
+        var query = _db.Subjects.AsNoTracking()
             .Where(s => s.IsActive)
+            .AsQueryable();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            query = query.Where(s => s.Name.ToLower().Contains(term)
+                || (s.Description != null && s.Description.ToLower().Contains(term)));
+        }
+
+        var totalCount = await query.CountAsync();
+
+        var safePage = Math.Max(1, page);
+        var totalPages = pageSize > 0 ? (int)Math.Ceiling((double)totalCount / pageSize) : 1;
+        if (totalPages > 0 && safePage > totalPages) safePage = totalPages;
+
+        var subjects = await query
+            .OrderBy(s => s.Name)
+            .Skip((safePage - 1) * pageSize)
+            .Take(pageSize)
             .Include(s => s.Teachers)
             .Include(s => s.Chapters)
                 .ThenInclude(c => c.Lessons)
             .Include(s => s.Exams)
-            .OrderBy(s => s.Name)
             .ToListAsync();
 
         HashSet<long> enrolledSubjectIds = new();
         HashSet<long> completedLessonIds = new();
 
-        if (userId.HasValue)
+        if (userId.HasValue && subjects.Any())
         {
+            var pagedIds = subjects.Select(s => s.Id).ToList();
+
             enrolledSubjectIds = (await _db.EnrollmentSubjects.AsNoTracking()
                 .Where(e => e.UserId == userId.Value && e.IsActive)
                 .Select(e => e.SubjectId)
@@ -152,7 +187,7 @@ public class LearningAppService : LearningBffAppService
             });
         }
 
-        return result;
+        return (result, totalCount);
     }
 
     /// <summary>

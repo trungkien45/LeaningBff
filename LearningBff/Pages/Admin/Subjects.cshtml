@@ -283,6 +283,45 @@
     .teacher-check-item:hover {
         background: #e2e8f0;
     }
+
+    /* Pagination styling */
+    .pagination {
+        gap: 0.25rem;
+    }
+    .pagination .page-link {
+        color: #334155;
+        border-color: #cbd5e1;
+        background-color: #ffffff;
+        padding: 0.38rem 0.75rem;
+        border-radius: 0.5rem !important;
+        font-size: 0.85rem;
+        font-weight: 600;
+        transition: all 0.15s ease;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 34px;
+        height: 34px;
+        text-decoration: none;
+    }
+    .pagination .page-link:hover {
+        background-color: #f0f9ff;
+        border-color: #7dd3fc;
+        color: var(--adm-primary);
+    }
+    .pagination .page-item.active .page-link {
+        background-color: var(--adm-primary);
+        border-color: var(--adm-primary);
+        color: #ffffff;
+        box-shadow: 0 4px 6px -1px rgba(2, 132, 199, 0.3);
+    }
+    .pagination .page-item.disabled .page-link {
+        color: #94a3b8;
+        background-color: #f8fafc;
+        border-color: #e2e8f0;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
 </style>
 
 <div class="admin-container">
@@ -330,19 +369,13 @@
     </div>
 
     <!-- Stat Grid -->
-    @{
-        var totalSubs = Model.Subjects.Count;
-        var activeSubs = Model.Subjects.Count(s => s.IsActive);
-        var assignedSubs = Model.Subjects.Count(s => s.Teachers.Any());
-        var unassignedSubs = totalSubs - assignedSubs;
-    }
     <div class="stat-grid">
         <div class="stat-card">
             <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">
                 <i class="fas fa-book"></i>
             </div>
             <div>
-                <div class="h4 mb-0 fw-bold">@totalSubs</div>
+                <div class="h4 mb-0 fw-bold">@Model.TotalSystemSubjects</div>
                 <div class="text-muted small">Tổng số môn học</div>
             </div>
         </div>
@@ -352,7 +385,7 @@
                 <i class="fas fa-check-circle"></i>
             </div>
             <div>
-                <div class="h4 mb-0 fw-bold">@activeSubs</div>
+                <div class="h4 mb-0 fw-bold">@Model.ActiveSystemSubjects</div>
                 <div class="text-muted small">Môn đang mở</div>
             </div>
         </div>
@@ -362,7 +395,7 @@
                 <i class="fas fa-user-check"></i>
             </div>
             <div>
-                <div class="h4 mb-0 fw-bold">@assignedSubs</div>
+                <div class="h4 mb-0 fw-bold">@Model.AssignedSystemSubjects</div>
                 <div class="text-muted small">Đã gán giảng viên</div>
             </div>
         </div>
@@ -372,7 +405,7 @@
                 <i class="fas fa-user-xmark"></i>
             </div>
             <div>
-                <div class="h4 mb-0 fw-bold">@unassignedSubs</div>
+                <div class="h4 mb-0 fw-bold">@Model.UnassignedSystemSubjects</div>
                 <div class="text-muted small">Chưa có giảng viên</div>
             </div>
         </div>
@@ -385,32 +418,75 @@
                 <h2 class="h5 mb-0 fw-bold text-dark">
                     <i class="fas fa-list text-primary me-2"></i>Danh sách môn học
                 </h2>
-                <span class="badge bg-light text-secondary border">@totalSubs môn</span>
-            </div>
-
-            <!-- Search -->
-            <form method="get" class="d-flex align-items-center gap-2" style="max-width: 380px;">
-                <div class="input-group input-group-sm">
-                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
-                    <input type="text" name="search" class="form-control" placeholder="Tìm theo tên, giảng viên..." value="@Model.Search">
+                <span class="badge bg-light text-secondary border">
                     @if (!string.IsNullOrWhiteSpace(Model.Search))
                     {
-                        <a href="~/Admin/Subjects" class="btn btn-outline-secondary">Xóa</a>
+                        <span>@Model.TotalCount kết quả tìm kiếm</span>
                     }
-                    <button type="submit" class="btn btn-primary">Tìm</button>
+                    else
+                    {
+                        <span>@Model.TotalCount môn</span>
+                    }
+                </span>
+            </div>
+
+            <!-- Search Form -->
+            <form method="get" class="d-flex align-items-center gap-2" style="max-width: 420px; width: 100%;">
+                <input type="hidden" name="currentPage" value="1" />
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" 
+                           name="search" 
+                           class="form-control" 
+                           placeholder="Tìm kiếm theo tên môn học..." 
+                           value="@Model.Search">
+                    @if (!string.IsNullOrWhiteSpace(Model.Search))
+                    {
+                        <a href="~/Admin/Subjects" class="btn btn-outline-secondary" title="Xóa tìm kiếm">
+                            <i class="fas fa-times me-1"></i> Xóa
+                        </a>
+                    }
+                    <button type="submit" class="btn btn-primary fw-semibold px-3">
+                        <i class="fas fa-search me-1"></i> Tìm
+                    </button>
                 </div>
             </form>
         </div>
+
+        @if (!string.IsNullOrWhiteSpace(Model.Search))
+        {
+            <div class="d-flex align-items-center justify-content-between p-2 mb-3 bg-light rounded border border-primary border-opacity-25">
+                <div class="small text-muted">
+                    <i class="fas fa-filter text-primary me-1"></i>
+                    Đang tìm theo tên: <strong class="text-primary">"@Model.Search"</strong> 
+                    &mdash; Tìm thấy <strong>@Model.TotalCount</strong> kết quả
+                </div>
+                <a href="~/Admin/Subjects" class="btn btn-sm btn-link text-danger text-decoration-none p-0 fw-semibold">
+                    <i class="fas fa-times-circle me-1"></i> Bỏ lọc tìm kiếm
+                </a>
+            </div>
+        }
 
         @if (!Model.Subjects.Any())
         {
             <div class="text-center py-5 text-muted">
                 <i class="fas fa-book-open fa-3x mb-3 text-secondary" style="opacity: 0.35;"></i>
-                <p class="h6 mb-2">Không tìm thấy môn học nào</p>
-                <p class="small text-muted mb-3">Nhấn nút bên dưới để tạo môn học đầu tiên cho hệ thống.</p>
-                <button type="button" class="btn btn-primary btn-sm" onclick="openCreateModal()">
-                    <i class="fas fa-plus me-1"></i> Tạo môn học
-                </button>
+                @if (!string.IsNullOrWhiteSpace(Model.Search))
+                {
+                    <p class="h6 mb-2 text-dark">Không tìm thấy môn học nào khớp với từ khóa "@Model.Search"</p>
+                    <p class="small text-muted mb-3">Vui lòng kiểm tra lại từ khóa hoặc quay lại danh sách tất cả môn học.</p>
+                    <a href="~/Admin/Subjects" class="btn btn-outline-primary btn-sm">
+                        <i class="fas fa-arrow-left me-1"></i> Xem tất cả môn học
+                    </a>
+                }
+                else
+                {
+                    <p class="h6 mb-2">Chưa có môn học nào trong hệ thống</p>
+                    <p class="small text-muted mb-3">Nhấn nút bên dưới để tạo môn học đầu tiên cho hệ thống.</p>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="openCreateModal()">
+                        <i class="fas fa-plus me-1"></i> Tạo môn học
+                    </button>
+                }
             </div>
         }
         else
@@ -434,8 +510,9 @@
                         {
                             var sub = Model.Subjects[i];
                             var teacherIdsJson = System.Text.Json.JsonSerializer.Serialize(sub.TeacherIds);
+                            var rowNum = (Model.CurrentPage - 1) * Model.PageSize + i + 1;
                             <tr>
-                                <td class="text-muted small">@(i + 1)</td>
+                                <td class="text-muted small">@rowNum</td>
                                 <td>
                                     <div class="fw-bold text-dark">@sub.Name</div>
                                     @if (!string.IsNullOrEmpty(sub.Description))
@@ -517,6 +594,77 @@
                     </tbody>
                 </table>
             </div>
+
+            <!-- Phân trang & Thông tin hiển thị -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-3 mt-3 border-top">
+                <div class="text-muted small">
+                    Hiển thị <span class="fw-semibold text-dark">@Model.StartIndex</span> - <span class="fw-semibold text-dark">@Model.EndIndex</span> trong tổng số <span class="fw-semibold text-dark">@Model.TotalCount</span> môn học
+                </div>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Phân trang môn học">
+                        <ul class="pagination pagination-sm mb-0">
+                            <!-- Trang đầu -->
+                            <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" href="?currentPage=1&search=@Model.Search" title="Trang đầu">
+                                    <i class="fas fa-angles-left"></i>
+                                </a>
+                            </li>
+
+                            <!-- Trang trước -->
+                            <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" href="?currentPage=@(Model.CurrentPage - 1)&search=@Model.Search" title="Trang trước">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+
+                            @if (Model.StartPage > 1)
+                            {
+                                <li class="page-item">
+                                    <a class="page-link" href="?currentPage=1&search=@Model.Search">1</a>
+                                </li>
+                                @if (Model.StartPage > 2)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                            }
+
+                            @for (int p = Model.StartPage; p <= Model.EndPage; p++)
+                            {
+                                <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link" href="?currentPage=@p&search=@Model.Search">@p</a>
+                                </li>
+                            }
+
+                            @if (Model.EndPage < Model.TotalPages)
+                            {
+                                @if (Model.EndPage < Model.TotalPages - 1)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                <li class="page-item">
+                                    <a class="page-link" href="?currentPage=@Model.TotalPages&search=@Model.Search">@Model.TotalPages</a>
+                                </li>
+                            }
+
+                            <!-- Trang sau -->
+                            <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="?currentPage=@(Model.CurrentPage + 1)&search=@Model.Search" title="Trang sau">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+
+                            <!-- Trang cuối -->
+                            <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="?currentPage=@Model.TotalPages&search=@Model.Search" title="Trang cuối">
+                                    <i class="fas fa-angles-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            </div>
         }
     </div>
 </div>
@@ -532,6 +680,7 @@
             <button type="button" class="custom-modal-close" onclick="closeModal('createSubjectModal')">&times;</button>
         </div>
         <form method="post" asp-page-handler="Create">
+            <input type="hidden" name="search" value="@Model.Search">
             <div class="custom-modal-body">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Tên môn học <span class="text-danger">*</span></label>
@@ -597,6 +746,8 @@
         </div>
         <form method="post" asp-page-handler="Update">
             <input type="hidden" name="id" id="editSubjectId">
+            <input type="hidden" name="search" value="@Model.Search">
+            <input type="hidden" name="currentPage" value="@Model.CurrentPage">
             <div class="custom-modal-body">
                 <div class="mb-3">
                     <label class="form-label fw-semibold">Tên môn học <span class="text-danger">*</span></label>
@@ -654,6 +805,8 @@
         </div>
         <form method="post" asp-page-handler="AssignTeachers">
             <input type="hidden" name="subjectId" id="assignSubjectId">
+            <input type="hidden" name="search" value="@Model.Search">
+            <input type="hidden" name="currentPage" value="@Model.CurrentPage">
             <div class="custom-modal-body">
                 <p class="mb-3">Môn học: <strong id="assignSubjectName" class="text-primary fs-6"></strong></p>
                 <div class="mb-3">
@@ -697,6 +850,8 @@
         </div>
         <form method="post" asp-page-handler="Delete">
             <input type="hidden" name="id" id="deleteSubjectId">
+            <input type="hidden" name="search" value="@Model.Search">
+            <input type="hidden" name="currentPage" value="@Model.CurrentPage">
             <div class="custom-modal-body">
                 <p>Bạn có chắc chắn muốn xóa môn học <strong id="deleteSubjectName" class="text-danger"></strong> không?</p>
                 <div class="alert alert-warning small mb-0">

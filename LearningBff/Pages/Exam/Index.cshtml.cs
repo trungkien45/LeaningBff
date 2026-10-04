@@ -28,7 +28,23 @@ public class IndexModel : AbpPageModel
     public string ActiveTab { get; set; } = "exams";
     public bool IsAuthenticated => _currentUser.IsAuthenticated;
 
-    public async Task<IActionResult> OnGetAsync(long? subjectId = null, string tab = "exams")
+    // Pagination – Đề thi
+    public int ExamCurrentPage { get; set; } = 1;
+    public int ExamPageSize { get; set; } = 9;
+    public int ExamTotalCount { get; set; }
+    public int ExamTotalPages => ExamPageSize > 0 ? (int)Math.Ceiling((double)ExamTotalCount / ExamPageSize) : 1;
+
+    // Pagination – Lịch sử
+    public int HistoryCurrentPage { get; set; } = 1;
+    public int HistoryPageSize { get; set; } = 8;
+    public int HistoryTotalCount { get; set; }
+    public int HistoryTotalPages => HistoryPageSize > 0 ? (int)Math.Ceiling((double)HistoryTotalCount / HistoryPageSize) : 1;
+
+    public async Task<IActionResult> OnGetAsync(
+        long? subjectId = null,
+        string tab = "exams",
+        int examPage = 1,
+        int historyPage = 1)
     {
         if (!IsAuthenticated)
         {
@@ -37,10 +53,18 @@ public class IndexModel : AbpPageModel
 
         SelectedSubjectId = subjectId;
         ActiveTab = tab;
+        ExamCurrentPage = Math.Max(1, examPage);
+        HistoryCurrentPage = Math.Max(1, historyPage);
 
         Subjects = await _examAppService.GetPublishedExamSubjectsAsync();
-        ActiveExams = await _examAppService.GetPublishedExamsAsync(subjectId);
-        MyHistory = await _examAppService.GetMyExamHistoryAsync(subjectId);
+
+        var (exams, examTotal) = await _examAppService.GetPublishedExamsAsync(subjectId, ExamCurrentPage, ExamPageSize);
+        ActiveExams = exams;
+        ExamTotalCount = examTotal;
+
+        var (history, histTotal) = await _examAppService.GetMyExamHistoryAsync(subjectId, HistoryCurrentPage, HistoryPageSize);
+        MyHistory = history;
+        HistoryTotalCount = histTotal;
 
         return Page();
     }
