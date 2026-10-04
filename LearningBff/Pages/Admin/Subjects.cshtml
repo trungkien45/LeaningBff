@@ -176,24 +176,101 @@
         font-weight: bold;
     }
 
-    /* Modal teacher selector */
+    /* Custom Bulletproof Modal System */
+    .custom-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.65);
+        z-index: 99999;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 1.25rem;
+        backdrop-filter: blur(4px);
+    }
+    .custom-modal-overlay.active {
+        display: flex;
+    }
+    .custom-modal-card {
+        background: #ffffff;
+        border-radius: 1.15rem;
+        width: 100%;
+        max-width: 580px;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.3);
+        max-height: 90vh;
+        display: flex;
+        flex-direction: column;
+        overflow: hidden;
+        animation: customModalIn 0.2s ease-out;
+    }
+    @@keyframes customModalIn {
+        from { opacity: 0; transform: scale(0.95) translateY(10px); }
+        to { opacity: 1; transform: scale(1) translateY(0); }
+    }
+    .custom-modal-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        background: #ffffff;
+    }
+    .custom-modal-title {
+        font-size: 1.2rem;
+        font-weight: 700;
+        color: #0f172a;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .custom-modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        line-height: 1;
+        color: #94a3b8;
+        cursor: pointer;
+        padding: 0.25rem 0.5rem;
+        border-radius: 0.35rem;
+        transition: all 0.15s ease;
+    }
+    .custom-modal-close:hover {
+        color: #0f172a;
+        background: #f1f5f9;
+    }
+    .custom-modal-body {
+        padding: 1.5rem;
+        overflow-y: auto;
+        flex: 1;
+    }
+    .custom-modal-footer {
+        padding: 1rem 1.5rem;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+        background: #f8fafc;
+    }
+
+    /* Teacher selector box */
     .teacher-select-box {
-        max-height: 240px;
+        max-height: 220px;
         overflow-y: auto;
         border: 1px solid #cbd5e1;
-        border-radius: 0.5rem;
-        padding: 0.65rem;
+        border-radius: 0.6rem;
+        padding: 0.5rem;
         background: #f8fafc;
     }
     .teacher-check-item {
         display: flex;
         align-items: center;
         gap: 0.65rem;
-        padding: 0.45rem 0.6rem;
-        border-radius: 0.35rem;
+        padding: 0.5rem 0.65rem;
+        border-radius: 0.4rem;
         cursor: pointer;
         transition: background 0.15s ease;
-        margin-bottom: 0.2rem;
+        margin-bottom: 0.25rem;
     }
     .teacher-check-item:hover {
         background: #e2e8f0;
@@ -231,7 +308,8 @@
             Khởi tạo các môn học, kích hoạt chương trình đào tạo và chỉ định các giảng viên chịu trách nhiệm biên soạn đề thi, câu hỏi và giảng dạy trực tuyến.
         </p>
         <div>
-            <button type="button" class="btn btn-light fw-bold text-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createSubjectModal">
+            <!-- NÚT THÊM MÔN HỌC (Gọi hàm openCreateModal) -->
+            <button type="button" class="btn btn-light fw-bold text-primary shadow-sm" onclick="openCreateModal()">
                 <i class="fas fa-plus-circle me-1"></i> Thêm môn học mới
             </button>
             <a href="~/Admin" class="btn btn-outline-light ms-2">
@@ -322,7 +400,7 @@
                 <i class="fas fa-book-open fa-3x mb-3 text-secondary" style="opacity: 0.35;"></i>
                 <p class="h6 mb-2">Không tìm thấy môn học nào</p>
                 <p class="small text-muted mb-3">Nhấn nút bên dưới để tạo môn học đầu tiên cho hệ thống.</p>
-                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createSubjectModal">
+                <button type="button" class="btn btn-primary btn-sm" onclick="openCreateModal()">
                     <i class="fas fa-plus me-1"></i> Tạo môn học
                 </button>
             </div>
@@ -435,101 +513,41 @@
     </div>
 </div>
 
-<!-- MODAL 1: TẠO MÔN HỌC MỚI -->
-<div class="modal fade" id="createSubjectModal" tabindex="-1" aria-labelledby="createSubjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form method="post" asp-page-handler="Create">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="createSubjectModalLabel">
-                        <i class="fas fa-plus-circle text-primary me-2"></i>Thêm Môn Học Mới
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Tên môn học <span class="text-danger">*</span></label>
-                        <input type="text" name="name" class="form-control" placeholder="Ví dụ: Lập trình C# nâng cao" required>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Mô tả tóm tắt</label>
-                        <textarea name="description" class="form-control" rows="3" placeholder="Giới thiệu nội dung, yêu cầu và kiến thức môn học..."></textarea>
-                    </div>
-
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Phân công Giảng viên phụ trách</label>
-                        <div class="teacher-select-box">
-                            @if (!Model.AvailableTeachers.Any())
-                            {
-                                <div class="text-muted small py-2 text-center">Chưa có người dùng nào mang role Teacher/Admin.</div>
-                            }
-                            else
-                            {
-                                @foreach (var t in Model.AvailableTeachers)
-                                {
-                                    <label class="teacher-check-item">
-                                        <input type="checkbox" name="teacherIds" value="@t.Id" class="form-check-input">
-                                        <div class="small">
-                                            <div class="fw-semibold">@t.DisplayName</div>
-                                            @if (!string.IsNullOrEmpty(t.Email))
-                                            {
-                                                <div class="text-muted" style="font-size: 0.75rem;">@t.Email</div>
-                                            }
-                                        </div>
-                                    </label>
-                                }
-                            }
-                        </div>
-                        <div class="form-text small">Có thể chọn nhiều giảng viên cùng giảng dạy môn học này.</div>
-                    </div>
-
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="isActive" value="true" id="createIsActive" checked>
-                        <label class="form-check-label fw-semibold" for="createIsActive">Mở môn học cho học viên đăng ký</label>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="fas fa-check me-1"></i> Tạo môn học
-                    </button>
-                </div>
-            </form>
+<!-- ==================== MODAL 1: TẠO MÔN HỌC MỚI ==================== -->
+<div id="createSubjectModal" class="custom-modal-overlay">
+    <div class="custom-modal-card">
+        <div class="custom-modal-header">
+            <h5 class="custom-modal-title">
+                <i class="fas fa-plus-circle text-primary"></i>
+                <span>Thêm Môn Học Mới</span>
+            </h5>
+            <button type="button" class="custom-modal-close" onclick="closeModal('createSubjectModal')">&times;</button>
         </div>
-    </div>
-</div>
-
-<!-- MODAL 2: SỬA MÔN HỌC -->
-<div class="modal fade" id="editSubjectModal" tabindex="-1" aria-labelledby="editSubjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form method="post" asp-page-handler="Update">
-                <input type="hidden" name="id" id="editSubjectId">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="editSubjectModalLabel">
-                        <i class="fas fa-edit text-primary me-2"></i>Cập nhật Môn Học
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        <form method="post" asp-page-handler="Create">
+            <div class="custom-modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tên môn học <span class="text-danger">*</span></label>
+                    <input type="text" name="name" id="createSubjectName" class="form-control" placeholder="Ví dụ: Lập trình C# nâng cao" required maxlength="256">
                 </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Tên môn học <span class="text-danger">*</span></label>
-                        <input type="text" name="name" id="editSubjectName" class="form-control" required>
-                    </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Mô tả tóm tắt</label>
-                        <textarea name="description" id="editSubjectDesc" class="form-control" rows="3"></textarea>
-                    </div>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mô tả tóm tắt</label>
+                    <textarea name="description" id="createSubjectDesc" class="form-control" rows="3" placeholder="Giới thiệu nội dung, yêu cầu và kiến thức môn học..."></textarea>
+                </div>
 
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Giảng viên phụ trách</label>
-                        <div class="teacher-select-box" id="editTeacherBox">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Phân công Giảng viên phụ trách</label>
+                    <div class="teacher-select-box">
+                        @if (!Model.AvailableTeachers.Any())
+                        {
+                            <div class="text-muted small py-2 text-center">Chưa có người dùng nào mang role Teacher/Admin.</div>
+                        }
+                        else
+                        {
                             @foreach (var t in Model.AvailableTeachers)
                             {
                                 <label class="teacher-check-item">
-                                    <input type="checkbox" name="teacherIds" value="@t.Id" class="form-check-input edit-teacher-chk">
+                                    <input type="checkbox" name="teacherIds" value="@t.Id" class="form-check-input me-2">
                                     <div class="small">
                                         <div class="fw-semibold">@t.DisplayName</div>
                                         @if (!string.IsNullOrEmpty(t.Email))
@@ -539,100 +557,190 @@
                                     </div>
                                 </label>
                             }
-                        </div>
+                        }
                     </div>
+                    <div class="form-text small text-muted">Có thể chọn nhiều giảng viên cùng chịu trách nhiệm giảng dạy môn học này.</div>
+                </div>
 
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" name="isActive" value="true" id="editSubjectIsActive">
-                        <label class="form-check-label fw-semibold" for="editSubjectIsActive">Mở môn học cho học viên đăng ký</label>
-                    </div>
+                <div class="form-check form-switch mt-3">
+                    <input class="form-check-input" type="checkbox" name="isActive" value="true" id="createSubjectIsActive" checked>
+                    <label class="form-check-label fw-semibold" for="createSubjectIsActive">Mở môn học cho học viên đăng ký</label>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="fas fa-save me-1"></i> Lưu thay đổi
-                    </button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('createSubjectModal')">Hủy bỏ</button>
+                <button type="submit" class="btn btn-primary fw-semibold">
+                    <i class="fas fa-check me-1"></i> Tạo môn học
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
-<!-- MODAL 3: GÁN NHANH GIẢNG VIÊN -->
-<div class="modal fade" id="assignTeacherModal" tabindex="-1" aria-labelledby="assignTeacherModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form method="post" asp-page-handler="AssignTeachers">
-                <input type="hidden" name="subjectId" id="assignSubjectId">
-                <div class="modal-header">
-                    <h5 class="modal-title fw-bold" id="assignTeacherModalLabel">
-                        <i class="fas fa-user-plus text-primary me-2"></i>Phân công Giảng viên
-                    </h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+<!-- ==================== MODAL 2: SỬA MÔN HỌC ==================== -->
+<div id="editSubjectModal" class="custom-modal-overlay">
+    <div class="custom-modal-card">
+        <div class="custom-modal-header">
+            <h5 class="custom-modal-title">
+                <i class="fas fa-edit text-primary"></i>
+                <span>Cập nhật Môn Học</span>
+            </h5>
+            <button type="button" class="custom-modal-close" onclick="closeModal('editSubjectModal')">&times;</button>
+        </div>
+        <form method="post" asp-page-handler="Update">
+            <input type="hidden" name="id" id="editSubjectId">
+            <div class="custom-modal-body">
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Tên môn học <span class="text-danger">*</span></label>
+                    <input type="text" name="name" id="editSubjectName" class="form-control" required maxlength="256">
                 </div>
-                <div class="modal-body">
-                    <p class="mb-2">Môn học: <strong id="assignSubjectName" class="text-primary"></strong></p>
-                    <div class="mb-3">
-                        <label class="form-label fw-semibold">Chọn giảng viên chịu trách nhiệm giảng dạy:</label>
-                        <div class="teacher-select-box" id="assignTeacherBox">
-                            @foreach (var t in Model.AvailableTeachers)
-                            {
-                                <label class="teacher-check-item">
-                                    <input type="checkbox" name="teacherIds" value="@t.Id" class="form-check-input assign-teacher-chk">
-                                    <div class="small">
-                                        <div class="fw-semibold">@t.DisplayName</div>
-                                        @if (!string.IsNullOrEmpty(t.Email))
-                                        {
-                                            <div class="text-muted" style="font-size: 0.75rem;">@t.Email</div>
-                                        }
-                                    </div>
-                                </label>
-                            }
-                        </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Mô tả tóm tắt</label>
+                    <textarea name="description" id="editSubjectDesc" class="form-control" rows="3"></textarea>
+                </div>
+
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Giảng viên phụ trách</label>
+                    <div class="teacher-select-box">
+                        @foreach (var t in Model.AvailableTeachers)
+                        {
+                            <label class="teacher-check-item">
+                                <input type="checkbox" name="teacherIds" value="@t.Id" class="form-check-input me-2 edit-teacher-chk">
+                                <div class="small">
+                                    <div class="fw-semibold">@t.DisplayName</div>
+                                    @if (!string.IsNullOrEmpty(t.Email))
+                                    {
+                                        <div class="text-muted" style="font-size: 0.75rem;">@t.Email</div>
+                                    }
+                                </div>
+                            </label>
+                        }
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
-                    <button type="submit" class="btn btn-primary fw-semibold">
-                        <i class="fas fa-check me-1"></i> Cập nhật phân công
-                    </button>
+
+                <div class="form-check form-switch mt-3">
+                    <input class="form-check-input" type="checkbox" name="isActive" value="true" id="editSubjectIsActive">
+                    <label class="form-check-label fw-semibold" for="editSubjectIsActive">Mở môn học cho học viên đăng ký</label>
                 </div>
-            </form>
-        </div>
+            </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('editSubjectModal')">Hủy bỏ</button>
+                <button type="submit" class="btn btn-primary fw-semibold">
+                    <i class="fas fa-save me-1"></i> Lưu thay đổi
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
-<!-- MODAL 4: XÁC NHẬN XÓA -->
-<div class="modal fade" id="deleteSubjectModal" tabindex="-1" aria-labelledby="deleteSubjectModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-dialog-centered">
-        <div class="modal-content">
-            <form method="post" asp-page-handler="Delete">
-                <input type="hidden" name="id" id="deleteSubjectId">
-                <div class="modal-header bg-danger text-white">
-                    <h5 class="modal-title fw-bold" id="deleteSubjectModalLabel">
-                        <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận xóa môn học
-                    </h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <p>Bạn có chắc chắn muốn xóa môn học <strong id="deleteSubjectName" class="text-danger"></strong> không?</p>
-                    <div class="alert alert-warning small mb-0">
-                        <i class="fas fa-info-circle me-1"></i> Lưu ý: Khi xóa môn học, tất cả đề thi, câu hỏi và tiến trình học viên liên quan cũng sẽ bị gỡ bỏ theo cấu hình Cascade.
+<!-- ==================== MODAL 3: GÁN NHANH GIẢNG VIÊN ==================== -->
+<div id="assignTeacherModal" class="custom-modal-overlay">
+    <div class="custom-modal-card">
+        <div class="custom-modal-header">
+            <h5 class="custom-modal-title">
+                <i class="fas fa-user-plus text-primary"></i>
+                <span>Phân công Giảng viên</span>
+            </h5>
+            <button type="button" class="custom-modal-close" onclick="closeModal('assignTeacherModal')">&times;</button>
+        </div>
+        <form method="post" asp-page-handler="AssignTeachers">
+            <input type="hidden" name="subjectId" id="assignSubjectId">
+            <div class="custom-modal-body">
+                <p class="mb-3">Môn học: <strong id="assignSubjectName" class="text-primary fs-6"></strong></p>
+                <div class="mb-3">
+                    <label class="form-label fw-semibold">Chọn giảng viên chịu trách nhiệm giảng dạy:</label>
+                    <div class="teacher-select-box">
+                        @foreach (var t in Model.AvailableTeachers)
+                        {
+                            <label class="teacher-check-item">
+                                <input type="checkbox" name="teacherIds" value="@t.Id" class="form-check-input me-2 assign-teacher-chk">
+                                <div class="small">
+                                    <div class="fw-semibold">@t.DisplayName</div>
+                                    @if (!string.IsNullOrEmpty(t.Email))
+                                    {
+                                        <div class="text-muted" style="font-size: 0.75rem;">@t.Email</div>
+                                    }
+                                </div>
+                            </label>
+                        }
                     </div>
                 </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
-                    <button type="submit" class="btn btn-danger fw-semibold">
-                        <i class="fas fa-trash-alt me-1"></i> Xóa vĩnh viễn
-                    </button>
-                </div>
-            </form>
-        </div>
+            </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('assignTeacherModal')">Hủy bỏ</button>
+                <button type="submit" class="btn btn-primary fw-semibold">
+                    <i class="fas fa-check me-1"></i> Cập nhật phân công
+                </button>
+            </div>
+        </form>
     </div>
 </div>
 
-@section scripts {
+<!-- ==================== MODAL 4: XÁC NHẬN XÓA ==================== -->
+<div id="deleteSubjectModal" class="custom-modal-overlay">
+    <div class="custom-modal-card" style="max-width: 460px;">
+        <div class="custom-modal-header bg-danger text-white">
+            <h5 class="custom-modal-title text-white">
+                <i class="fas fa-exclamation-triangle"></i>
+                <span>Xác nhận xóa môn học</span>
+            </h5>
+            <button type="button" class="custom-modal-close text-white" onclick="closeModal('deleteSubjectModal')">&times;</button>
+        </div>
+        <form method="post" asp-page-handler="Delete">
+            <input type="hidden" name="id" id="deleteSubjectId">
+            <div class="custom-modal-body">
+                <p>Bạn có chắc chắn muốn xóa môn học <strong id="deleteSubjectName" class="text-danger"></strong> không?</p>
+                <div class="alert alert-warning small mb-0">
+                    <i class="fas fa-info-circle me-1"></i> Lưu ý: Khi xóa môn học, tất cả đề thi, câu hỏi và tiến trình học viên liên quan cũng sẽ bị gỡ bỏ.
+                </div>
+            </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('deleteSubjectModal')">Hủy bỏ</button>
+                <button type="submit" class="btn btn-danger fw-semibold">
+                    <i class="fas fa-trash-alt me-1"></i> Xóa vĩnh viễn
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
+    // Bulletproof Modal Handlers
+    function openModal(modalId) {
+        var modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.add('active');
+            document.body.style.overflow = 'hidden';
+        }
+    }
+
+    function closeModal(modalId) {
+        var modal = document.getElementById(modalId);
+        if (modal) {
+            modal.classList.remove('active');
+            document.body.style.overflow = '';
+        }
+    }
+
+    function openCreateModal() {
+        // Reset form inputs
+        var nameInput = document.getElementById('createSubjectName');
+        if (nameInput) nameInput.value = '';
+        var descInput = document.getElementById('createSubjectDesc');
+        if (descInput) descInput.value = '';
+        var activeInput = document.getElementById('createSubjectIsActive');
+        if (activeInput) activeInput.checked = true;
+
+        var checkboxes = document.querySelectorAll('#createSubjectModal input[type="checkbox"][name="teacherIds"]');
+        checkboxes.forEach(function (chk) {
+            chk.checked = false;
+        });
+
+        openModal('createSubjectModal');
+        if (nameInput) nameInput.focus();
+    }
+
     function openEditModal(id, name, description, isActive, teacherIds) {
         document.getElementById('editSubjectId').value = id;
         document.getElementById('editSubjectName').value = name;
@@ -641,11 +749,10 @@
 
         var checkboxes = document.querySelectorAll('.edit-teacher-chk');
         checkboxes.forEach(function (chk) {
-            chk.checked = teacherIds.includes(chk.value);
+            chk.checked = teacherIds && teacherIds.includes(chk.value);
         });
 
-        var modal = new bootstrap.Modal(document.getElementById('editSubjectModal'));
-        modal.show();
+        openModal('editSubjectModal');
     }
 
     function openAssignModal(id, name, teacherIds) {
@@ -654,19 +761,32 @@
 
         var checkboxes = document.querySelectorAll('.assign-teacher-chk');
         checkboxes.forEach(function (chk) {
-            chk.checked = teacherIds.includes(chk.value);
+            chk.checked = teacherIds && teacherIds.includes(chk.value);
         });
 
-        var modal = new bootstrap.Modal(document.getElementById('assignTeacherModal'));
-        modal.show();
+        openModal('assignTeacherModal');
     }
 
     function openDeleteModal(id, name) {
         document.getElementById('deleteSubjectId').value = id;
         document.getElementById('deleteSubjectName').textContent = name;
 
-        var modal = new bootstrap.Modal(document.getElementById('deleteSubjectModal'));
-        modal.show();
+        openModal('deleteSubjectModal');
     }
+
+    // Đóng modal khi click ra vùng xám overlay bên ngoài
+    document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('.custom-modal-overlay').forEach(function (overlay) {
+            overlay.addEventListener('click', function (e) {
+                if (e.target === overlay) {
+                    overlay.classList.remove('active');
+                    document.body.style.overflow = '';
+                }
+            });
+        });
+    });
 </script>
+
+@section Scripts {
+    <!-- Also register in Scripts section if layout supports it -->
 }
