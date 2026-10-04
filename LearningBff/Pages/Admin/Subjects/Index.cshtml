@@ -1,0 +1,669 @@
+@page
+@model LearningBff.Pages.Admin.Subjects.IndexModel
+@{
+    ViewData["Title"] = "Quản lý Môn học & Giảng viên (Admin)";
+}
+
+<style>
+    :root {
+        --adm-primary: #0284c7;
+        --adm-primary-dark: #0369a1;
+        --adm-bg: #f8fafc;
+        --adm-card-bg: #ffffff;
+        --adm-border: #e2e8f0;
+        --adm-text: #0f172a;
+        --adm-muted: #64748b;
+        --adm-success: #10b981;
+        --adm-warning: #f59e0b;
+        --adm-danger: #ef4444;
+    }
+
+    .admin-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem 1rem;
+    }
+
+    /* Admin Hero */
+    .admin-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #0369a1 60%, #0284c7 100%);
+        border-radius: 1.25rem;
+        padding: 2.25rem 2rem;
+        color: #ffffff;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.3);
+    }
+    .admin-hero::after {
+        content: '';
+        position: absolute;
+        top: -30%;
+        right: -8%;
+        width: 380px;
+        height: 380px;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0) 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .admin-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(2, 132, 199, 0.25);
+        border: 1px solid rgba(186, 230, 253, 0.35);
+        color: #e0f2fe;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        margin-bottom: 0.85rem;
+        backdrop-filter: blur(4px);
+    }
+    .admin-hero-title {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-bottom: 0.5rem;
+    }
+    .admin-hero-subtitle {
+        color: #e2e8f0;
+        font-size: 1rem;
+        max-width: 750px;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    /* Stat Cards */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: var(--adm-card-bg);
+        border: 1px solid var(--adm-border);
+        border-radius: 1rem;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.2s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.06);
+    }
+    .stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+
+    /* Table & Panel */
+    .adm-panel {
+        background: var(--adm-card-bg);
+        border: 1px solid var(--adm-border);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+    .adm-panel-header {
+        display: flex;
+        flex-wrap: wrap;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        margin-bottom: 1.25rem;
+        padding-bottom: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .adm-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .adm-table th {
+        font-size: 0.775rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--adm-muted);
+        padding: 0.75rem 0.85rem;
+        border-bottom: 2px solid #e2e8f0;
+        background: #f8fafc;
+    }
+    .adm-table td {
+        padding: 0.95rem 0.85rem;
+        font-size: 0.9rem;
+        color: var(--adm-text);
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+    .adm-table tr:hover td {
+        background: #fafcff;
+    }
+
+    /* Teacher badge list */
+    .teacher-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        background: #f1f5f9;
+        border: 1px solid #cbd5e1;
+        color: #334155;
+        font-size: 0.775rem;
+        font-weight: 600;
+        padding: 0.25rem 0.6rem;
+        border-radius: 9999px;
+        margin: 0.15rem 0.2rem 0.15rem 0;
+    }
+    .teacher-badge-avatar {
+        width: 18px;
+        height: 18px;
+        border-radius: 50%;
+        background: #6366f1;
+        color: #ffffff;
+        font-size: 0.65rem;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+    }
+
+    /* Modal teacher selector */
+    .teacher-select-box {
+        max-height: 240px;
+        overflow-y: auto;
+        border: 1px solid #cbd5e1;
+        border-radius: 0.5rem;
+        padding: 0.65rem;
+        background: #f8fafc;
+    }
+    .teacher-check-item {
+        display: flex;
+        align-items: center;
+        gap: 0.65rem;
+        padding: 0.45rem 0.6rem;
+        border-radius: 0.35rem;
+        cursor: pointer;
+        transition: background 0.15s ease;
+        margin-bottom: 0.2rem;
+    }
+    .teacher-check-item:hover {
+        background: #e2e8f0;
+    }
+</style>
+
+<div class="admin-container">
+    <!-- Alerts -->
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
+            <i class="fas fa-check-circle me-2 fs-5"></i>
+            <div>@Model.SuccessMessage</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center mb-4" role="alert">
+            <i class="fas fa-exclamation-triangle me-2 fs-5"></i>
+            <div>@Model.ErrorMessage</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Hero Header -->
+    <div class="admin-hero">
+        <div class="admin-badge">
+            <i class="fas fa-shield-halved"></i>
+            <span>Vùng Quản Trị Hệ Thống (Chỉ Quản trị viên)</span>
+        </div>
+        <h1 class="admin-hero-title">Quản lý Môn học & Phân công Giảng viên</h1>
+        <p class="admin-hero-subtitle">
+            Khởi tạo các môn học, kích hoạt chương trình đào tạo và chỉ định các giảng viên chịu trách nhiệm biên soạn đề thi, câu hỏi và giảng dạy trực tuyến.
+        </p>
+        <div>
+            <button type="button" class="btn btn-light fw-bold text-primary shadow-sm" data-bs-toggle="modal" data-bs-target="#createSubjectModal">
+                <i class="fas fa-plus-circle me-1"></i> Thêm môn học mới
+            </button>
+            <a href="~/Teacher" class="btn btn-outline-light ms-2">
+                <i class="fas fa-chalkboard-teacher me-1"></i> Không gian giảng viên
+            </a>
+        </div>
+    </div>
+
+    <!-- Stat Grid -->
+    @{
+        var totalSubs = Model.Subjects.Count;
+        var activeSubs = Model.Subjects.Count(s => s.IsActive);
+        var assignedSubs = Model.Subjects.Count(s => s.Teachers.Any());
+        var unassignedSubs = totalSubs - assignedSubs;
+    }
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">
+                <i class="fas fa-book"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold">@totalSubs</div>
+                <div class="text-muted small">Tổng số môn học</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #dcfce7; color: #15803d;">
+                <i class="fas fa-check-circle"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold">@activeSubs</div>
+                <div class="text-muted small">Môn đang mở</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold">@assignedSubs</div>
+                <div class="text-muted small">Đã gán giảng viên</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #fee2e2; color: #b91c1c;">
+                <i class="fas fa-user-xmark"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold">@unassignedSubs</div>
+                <div class="text-muted small">Chưa có giảng viên</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Panel -->
+    <div class="adm-panel">
+        <div class="adm-panel-header">
+            <div class="d-flex align-items-center gap-2">
+                <h2 class="h5 mb-0 fw-bold text-dark">
+                    <i class="fas fa-list text-primary me-2"></i>Danh sách môn học
+                </h2>
+                <span class="badge bg-light text-secondary border">@totalSubs môn</span>
+            </div>
+
+            <!-- Search -->
+            <form method="get" class="d-flex align-items-center gap-2" style="max-width: 380px;">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" name="search" class="form-control" placeholder="Tìm theo tên, giảng viên..." value="@Model.Search">
+                    @if (!string.IsNullOrWhiteSpace(Model.Search))
+                    {
+                        <a href="~/Admin/Subjects" class="btn btn-outline-secondary">Xóa</a>
+                    }
+                    <button type="submit" class="btn btn-primary">Tìm</button>
+                </div>
+            </form>
+        </div>
+
+        @if (!Model.Subjects.Any())
+        {
+            <div class="text-center py-5 text-muted">
+                <i class="fas fa-book-open fa-3x mb-3 text-secondary" style="opacity: 0.35;"></i>
+                <p class="h6 mb-2">Không tìm thấy môn học nào</p>
+                <p class="small text-muted mb-3">Nhấn nút bên dưới để tạo môn học đầu tiên cho hệ thống.</p>
+                <button type="button" class="btn btn-primary btn-sm" data-bs-toggle="modal" data-bs-target="#createSubjectModal">
+                    <i class="fas fa-plus me-1"></i> Tạo môn học
+                </button>
+            </div>
+        }
+        else
+        {
+            <div class="table-responsive">
+                <table class="adm-table">
+                    <thead>
+                        <tr>
+                            <th style="width: 50px;">#</th>
+                            <th style="min-width: 200px;">Tên môn học</th>
+                            <th style="min-width: 240px;">Giảng viên phụ trách</th>
+                            <th class="text-center" style="width: 90px;">Đề thi</th>
+                            <th class="text-center" style="width: 90px;">Câu hỏi</th>
+                            <th class="text-center" style="width: 100px;">Học viên</th>
+                            <th class="text-center" style="width: 120px;">Trạng thái</th>
+                            <th class="text-end" style="min-width: 220px;">Hành động</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @for (int i = 0; i < Model.Subjects.Count; i++)
+                        {
+                            var sub = Model.Subjects[i];
+                            var teacherIdsJson = System.Text.Json.JsonSerializer.Serialize(sub.TeacherIds);
+                            <tr>
+                                <td class="text-muted small">@(i + 1)</td>
+                                <td>
+                                    <div class="fw-bold text-dark">@sub.Name</div>
+                                    @if (!string.IsNullOrEmpty(sub.Description))
+                                    {
+                                        <div class="text-muted small text-truncate" style="max-width: 280px;" title="@sub.Description">
+                                            @sub.Description
+                                        </div>
+                                    }
+                                </td>
+                                <td>
+                                    @if (sub.Teachers.Any())
+                                    {
+                                        <div class="d-flex flex-wrap align-items-center">
+                                            @foreach (var t in sub.Teachers)
+                                            {
+                                                <span class="teacher-badge" title="@t.Email">
+                                                    <span class="teacher-badge-avatar">
+                                                        @((t.Name ?? t.UserName).Substring(0, 1).ToUpper())
+                                                    </span>
+                                                    <span>@(!string.IsNullOrEmpty(t.Name) ? t.Name : t.UserName)</span>
+                                                </span>
+                                            }
+                                        </div>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-warning text-dark">
+                                            <i class="fas fa-exclamation-circle me-1"></i> Chưa gán GV
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border">@sub.ExamCount</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-dark border">@sub.QuestionCount</span>
+                                </td>
+                                <td class="text-center">
+                                    <span class="badge bg-light text-primary border">@sub.StudentCount</span>
+                                </td>
+                                <td class="text-center">
+                                    @if (sub.IsActive)
+                                    {
+                                        <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25 px-2 py-1">
+                                            <i class="fas fa-check-circle me-1"></i> Đang mở
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25 px-2 py-1">
+                                            <i class="fas fa-ban me-1"></i> Đã đóng
+                                        </span>
+                                    }
+                                </td>
+                                <td class="text-end">
+                                    <div class="btn-group btn-group-sm">
+                                        <!-- Gán nhanh GV -->
+                                        <button type="button" class="btn btn-outline-primary"
+                                                onclick="openAssignModal(@sub.Id, '@Html.Raw(sub.Name.Replace("'", "\\'"))', @teacherIdsJson)"
+                                                title="Phân công giảng viên">
+                                            <i class="fas fa-user-plus me-1"></i> Gán GV
+                                        </button>
+                                        <!-- Sửa môn học -->
+                                        <button type="button" class="btn btn-outline-secondary"
+                                                onclick="openEditModal(@sub.Id, '@Html.Raw(sub.Name.Replace("'", "\\'"))', '@Html.Raw((sub.Description ?? "").Replace("'", "\\'"))', @sub.IsActive.ToString().ToLower(), @teacherIdsJson)"
+                                                title="Sửa thông tin môn học">
+                                            <i class="fas fa-edit"></i>
+                                        </button>
+                                        <!-- Xóa môn học -->
+                                        <button type="button" class="btn btn-outline-danger"
+                                                onclick="openDeleteModal(@sub.Id, '@Html.Raw(sub.Name.Replace("'", "\\'"))')"
+                                                title="Xóa môn học">
+                                            <i class="fas fa-trash-alt"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+    </div>
+</div>
+
+<!-- MODAL 1: TẠO MÔN HỌC MỚI -->
+<div class="modal fade" id="createSubjectModal" tabindex="-1" aria-labelledby="createSubjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Create">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="createSubjectModalLabel">
+                        <i class="fas fa-plus-circle text-primary me-2"></i>Thêm Môn Học Mới
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên môn học <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="Ví dụ: Lập trình C# nâng cao" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mô tả tóm tắt</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Giới thiệu nội dung, yêu cầu và kiến thức môn học..."></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Phân công Giảng viên phụ trách</label>
+                        <div class="teacher-select-box">
+                            @if (!Model.AvailableTeachers.Any())
+                            {
+                                <div class="text-muted small py-2 text-center">Chưa có người dùng nào mang role Teacher/Admin.</div>
+                            }
+                            else
+                            {
+                                @foreach (var t in Model.AvailableTeachers)
+                                {
+                                    <label class="teacher-check-item">
+                                        <input type="checkbox" name="teacherIds" value="@t.Id" class="form-check-input">
+                                        <div class="small">
+                                            <div class="fw-semibold">@t.DisplayName</div>
+                                            @if (!string.IsNullOrEmpty(t.Email))
+                                            {
+                                                <div class="text-muted" style="font-size: 0.75rem;">@t.Email</div>
+                                            }
+                                        </div>
+                                    </label>
+                                }
+                            }
+                        </div>
+                        <div class="form-text small">Có thể chọn nhiều giảng viên cùng giảng dạy môn học này.</div>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="isActive" value="true" id="createIsActive" checked>
+                        <label class="form-check-label fw-semibold" for="createIsActive">Mở môn học cho học viên đăng ký</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="fas fa-check me-1"></i> Tạo môn học
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 2: SỬA MÔN HỌC -->
+<div class="modal fade" id="editSubjectModal" tabindex="-1" aria-labelledby="editSubjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Update">
+                <input type="hidden" name="id" id="editSubjectId">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="editSubjectModalLabel">
+                        <i class="fas fa-edit text-primary me-2"></i>Cập nhật Môn Học
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên môn học <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editSubjectName" class="form-control" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mô tả tóm tắt</label>
+                        <textarea name="description" id="editSubjectDesc" class="form-control" rows="3"></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Giảng viên phụ trách</label>
+                        <div class="teacher-select-box" id="editTeacherBox">
+                            @foreach (var t in Model.AvailableTeachers)
+                            {
+                                <label class="teacher-check-item">
+                                    <input type="checkbox" name="teacherIds" value="@t.Id" class="form-check-input edit-teacher-chk">
+                                    <div class="small">
+                                        <div class="fw-semibold">@t.DisplayName</div>
+                                        @if (!string.IsNullOrEmpty(t.Email))
+                                        {
+                                            <div class="text-muted" style="font-size: 0.75rem;">@t.Email</div>
+                                        }
+                                    </div>
+                                </label>
+                            }
+                        </div>
+                    </div>
+
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="isActive" value="true" id="editSubjectIsActive">
+                        <label class="form-check-label fw-semibold" for="editSubjectIsActive">Mở môn học cho học viên đăng ký</label>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="fas fa-save me-1"></i> Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 3: GÁN NHANH GIẢNG VIÊN -->
+<div class="modal fade" id="assignTeacherModal" tabindex="-1" aria-labelledby="assignTeacherModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="AssignTeachers">
+                <input type="hidden" name="subjectId" id="assignSubjectId">
+                <div class="modal-header">
+                    <h5 class="modal-title fw-bold" id="assignTeacherModalLabel">
+                        <i class="fas fa-user-plus text-primary me-2"></i>Phân công Giảng viên
+                    </h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p class="mb-2">Môn học: <strong id="assignSubjectName" class="text-primary"></strong></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Chọn giảng viên chịu trách nhiệm giảng dạy:</label>
+                        <div class="teacher-select-box" id="assignTeacherBox">
+                            @foreach (var t in Model.AvailableTeachers)
+                            {
+                                <label class="teacher-check-item">
+                                    <input type="checkbox" name="teacherIds" value="@t.Id" class="form-check-input assign-teacher-chk">
+                                    <div class="small">
+                                        <div class="fw-semibold">@t.DisplayName</div>
+                                        @if (!string.IsNullOrEmpty(t.Email))
+                                        {
+                                            <div class="text-muted" style="font-size: 0.75rem;">@t.Email</div>
+                                        }
+                                    </div>
+                                </label>
+                            }
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="fas fa-check me-1"></i> Cập nhật phân công
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 4: XÁC NHẬN XÓA -->
+<div class="modal fade" id="deleteSubjectModal" tabindex="-1" aria-labelledby="deleteSubjectModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <form method="post" asp-page-handler="Delete">
+                <input type="hidden" name="id" id="deleteSubjectId">
+                <div class="modal-header bg-danger text-white">
+                    <h5 class="modal-title fw-bold" id="deleteSubjectModalLabel">
+                        <i class="fas fa-exclamation-triangle me-2"></i>Xác nhận xóa môn học
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Bạn có chắc chắn muốn xóa môn học <strong id="deleteSubjectName" class="text-danger"></strong> không?</p>
+                    <div class="alert alert-warning small mb-0">
+                        <i class="fas fa-info-circle me-1"></i> Lưu ý: Khi xóa môn học, tất cả đề thi, câu hỏi và tiến trình học viên liên quan cũng sẽ bị gỡ bỏ theo cấu hình Cascade.
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-danger fw-semibold">
+                        <i class="fas fa-trash-alt me-1"></i> Xóa vĩnh viễn
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+@section scripts {
+<script>
+    function openEditModal(id, name, description, isActive, teacherIds) {
+        document.getElementById('editSubjectId').value = id;
+        document.getElementById('editSubjectName').value = name;
+        document.getElementById('editSubjectDesc').value = description || '';
+        document.getElementById('editSubjectIsActive').checked = isActive;
+
+        var checkboxes = document.querySelectorAll('.edit-teacher-chk');
+        checkboxes.forEach(function (chk) {
+            chk.checked = teacherIds.includes(chk.value);
+        });
+
+        var modal = new bootstrap.Modal(document.getElementById('editSubjectModal'));
+        modal.show();
+    }
+
+    function openAssignModal(id, name, teacherIds) {
+        document.getElementById('assignSubjectId').value = id;
+        document.getElementById('assignSubjectName').textContent = name;
+
+        var checkboxes = document.querySelectorAll('.assign-teacher-chk');
+        checkboxes.forEach(function (chk) {
+            chk.checked = teacherIds.includes(chk.value);
+        });
+
+        var modal = new bootstrap.Modal(document.getElementById('assignTeacherModal'));
+        modal.show();
+    }
+
+    function openDeleteModal(id, name) {
+        document.getElementById('deleteSubjectId').value = id;
+        document.getElementById('deleteSubjectName').textContent = name;
+
+        var modal = new bootstrap.Modal(document.getElementById('deleteSubjectModal'));
+        modal.show();
+    }
+</script>
+}

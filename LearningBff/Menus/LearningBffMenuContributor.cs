@@ -109,9 +109,28 @@ public class LearningBffMenuContributor : IMenuContributor
             context.Menu.Items.Insert(3, teacherMenu);
         }
 
+        if (currentUser.IsInRole("admin") || currentUser.IsInRole("Admin"))
+        {
+            var adminMenu = new ApplicationMenuItem(
+                LearningBffMenus.Admin,
+                "Quản trị",
+                icon: "fas fa-shield-alt",
+                order: 5
+            );
+
+            adminMenu.AddItem(new ApplicationMenuItem(
+                "Admin.Subjects",
+                "Quản lý môn học & Giảng viên",
+                "~/Admin/Subjects",
+                icon: "fas fa-book-bookmark"
+            ));
+
+            context.Menu.Items.Add(adminMenu);
+        }
+
         //Administration
         var administration = context.Menu.GetAdministration();
-        administration.Order = 5;
+        administration.Order = 6;
         //Administration->Identity
         administration.SetSubItemOrder(IdentityMenuNames.GroupName, 2);
         //Administration->Settings

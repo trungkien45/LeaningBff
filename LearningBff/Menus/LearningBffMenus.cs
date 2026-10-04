@@ -6,4 +6,5 @@ public class LearningBffMenus
 
     public const string Home = Prefix + ".Home";
     public const string Teacher = Prefix + ".Teacher";
+    public const string Admin = Prefix + ".Admin";
 }
