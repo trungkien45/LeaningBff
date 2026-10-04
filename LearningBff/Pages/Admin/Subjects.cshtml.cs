@@ -8,14 +8,14 @@ using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
 using LearningBff.Services;
 using LearningBff.Services.Dtos;
 
-namespace LearningBff.Pages.Admin.Subjects;
+namespace LearningBff.Pages.Admin;
 
 [Authorize(Roles = "admin,Admin")]
-public class IndexModel : AbpPageModel
+public class SubjectsModel : AbpPageModel
 {
     private readonly SubjectAppService _subjectAppService;
 
-    public IndexModel(SubjectAppService subjectAppService)
+    public SubjectsModel(SubjectAppService subjectAppService)
     {
         _subjectAppService = subjectAppService;
     }

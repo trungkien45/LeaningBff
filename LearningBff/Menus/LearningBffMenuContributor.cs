@@ -119,6 +119,13 @@ public class LearningBffMenuContributor : IMenuContributor
             );
 
             adminMenu.AddItem(new ApplicationMenuItem(
+                "Admin.Dashboard",
+                "Dashboard",
+                "~/Admin",
+                icon: "fas fa-chart-line"
+            ));
+
+            adminMenu.AddItem(new ApplicationMenuItem(
                 "Admin.Subjects",
                 "Quản lý môn học & Giảng viên",
                 "~/Admin/Subjects",

@@ -1,4 +1,537 @@
 @page
 @model LearningBff.Pages.Admin.IndexModel
 @{
+    ViewData["Title"] = "Bảng điều khiển Quản trị (Admin Dashboard)";
 }
+
+<style>
+    :root {
+        --adm-primary: #0284c7;
+        --adm-primary-dark: #0369a1;
+        --adm-bg: #f8fafc;
+        --adm-card-bg: #ffffff;
+        --adm-border: #e2e8f0;
+        --adm-text: #0f172a;
+        --adm-muted: #64748b;
+        --adm-success: #10b981;
+        --adm-warning: #f59e0b;
+        --adm-danger: #ef4444;
+    }
+
+    .admin-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem 1rem;
+    }
+
+    /* Admin Hero */
+    .admin-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #0369a1 60%, #0284c7 100%);
+        border-radius: 1.25rem;
+        padding: 2.25rem 2rem;
+        color: #ffffff;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 25px -5px rgba(2, 132, 199, 0.3);
+    }
+    .admin-hero::after {
+        content: '';
+        position: absolute;
+        top: -30%;
+        right: -8%;
+        width: 380px;
+        height: 380px;
+        background: radial-gradient(circle, rgba(56, 189, 248, 0.25) 0%, rgba(56, 189, 248, 0) 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .admin-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(2, 132, 199, 0.25);
+        border: 1px solid rgba(186, 230, 253, 0.35);
+        color: #e0f2fe;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        margin-bottom: 0.85rem;
+        backdrop-filter: blur(4px);
+    }
+    .admin-hero-title {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-bottom: 0.5rem;
+    }
+    .admin-hero-subtitle {
+        color: #e2e8f0;
+        font-size: 1rem;
+        max-width: 750px;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+
+    /* Stat Cards */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: var(--adm-card-bg);
+        border: 1px solid var(--adm-border);
+        border-radius: 1rem;
+        padding: 1.35rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1.15rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+        border-color: #cbd5e1;
+    }
+    .stat-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 0.85rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.4rem;
+        flex-shrink: 0;
+    }
+
+    /* Content Panels */
+    .adm-panel {
+        background: var(--adm-card-bg);
+        border: 1px solid var(--adm-border);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+        margin-bottom: 1.5rem;
+    }
+    .adm-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+
+    /* Table */
+    .adm-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .adm-table th {
+        font-size: 0.775rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--adm-muted);
+        padding: 0.65rem 0.85rem;
+        border-bottom: 2px solid #e2e8f0;
+        background: #f8fafc;
+    }
+    .adm-table td {
+        padding: 0.85rem 0.85rem;
+        font-size: 0.885rem;
+        color: var(--adm-text);
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+    .adm-table tr:hover td {
+        background: #fafcff;
+    }
+
+    /* Layout */
+    .dashboard-layout {
+        display: grid;
+        grid-template-columns: 1fr 360px;
+        gap: 1.75rem;
+    }
+    @@media (max-width: 1024px) {
+        .dashboard-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    .quick-link-box {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.85rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--adm-border);
+        color: var(--adm-text);
+        text-decoration: none;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s ease;
+        background: #fafafa;
+    }
+    .quick-link-box:hover {
+        background: #ffffff;
+        border-color: var(--adm-primary);
+        color: var(--adm-primary);
+        transform: translateX(4px);
+        box-shadow: 0 3px 8px rgba(2, 132, 199, 0.12);
+    }
+</style>
+
+<div class="admin-container">
+    <!-- Hero Header -->
+    <div class="admin-hero">
+        <div class="admin-badge">
+            <i class="fas fa-shield-halved"></i>
+            <span>Trung Tâm Điều Hành Hệ Thống (Admin Dashboard)</span>
+        </div>
+        <h1 class="admin-hero-title">Xin chào, Quản trị viên @Model.AdminUserName! ⚙️</h1>
+        <p class="admin-hero-subtitle">
+            Tổng quan tài nguyên học tập số: giám sát số lượng môn học, đội ngũ giáo viên, người dùng hoạt động/không hoạt động và cấu hình nền tảng.
+        </p>
+        <div class="d-flex flex-wrap gap-2">
+            <a href="~/Admin/Subjects" class="btn btn-light fw-bold text-primary shadow-sm">
+                <i class="fas fa-book-bookmark me-1"></i> Quản lý Môn học & Giảng viên
+            </a>
+            <a href="/Identity/Users" class="btn btn-outline-light">
+                <i class="fas fa-users-gear me-1"></i> Quản lý Người dùng
+            </a>
+            <a href="/Identity/Roles" class="btn btn-outline-light">
+                <i class="fas fa-user-shield me-1"></i> Quản lý Vai trò
+            </a>
+            <a href="~/Teacher" class="btn btn-outline-light">
+                <i class="fas fa-chalkboard-teacher me-1"></i> Dashboard Giảng viên
+            </a>
+        </div>
+    </div>
+
+    <!-- KPI Metric Grid: Môn học, Giáo viên, User Active/Inactive -->
+    <div class="stat-grid">
+        <!-- 1. SỐ MÔN HỌC -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold">@Model.TotalSubjects</div>
+                <div class="text-muted small">Tổng số Môn học</div>
+                <div class="mt-1">
+                    <span class="badge bg-success bg-opacity-10 text-success small border border-success border-opacity-25" style="font-size: 0.725rem;">
+                        <i class="fas fa-check me-1"></i>@Model.ActiveSubjects mở
+                    </span>
+                    <span class="badge bg-secondary bg-opacity-10 text-secondary small border border-secondary border-opacity-25" style="font-size: 0.725rem;">
+                        @Model.InactiveSubjects ẩn
+                    </span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 2. SỐ GIÁO VIÊN -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;">
+                <i class="fas fa-chalkboard-teacher"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold">@Model.TotalTeachers</div>
+                <div class="text-muted small">Đội ngũ Giáo viên</div>
+                <div class="small text-primary mt-1" style="font-size: 0.75rem;">
+                    <i class="fas fa-award me-1"></i>Role Teacher & Admin
+                </div>
+            </div>
+        </div>
+
+        <!-- 3. USER ACTIVE -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #dcfce7; color: #15803d;">
+                <i class="fas fa-user-check"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold text-success">@Model.ActiveUsers</div>
+                <div class="text-muted small">User Đang Hoạt Động</div>
+                <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                    <span>Active: <strong>@(Model.TotalUsers > 0 ? Math.Round((double)Model.ActiveUsers / Model.TotalUsers * 100, 1) : 0)%</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 4. USER INACTIVE -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #fee2e2; color: #b91c1c;">
+                <i class="fas fa-user-slash"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold text-danger">@Model.InactiveUsers</div>
+                <div class="text-muted small">User Không Hoạt Động</div>
+                <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                    <span>Inactive: <strong>@(Model.TotalUsers > 0 ? Math.Round((double)Model.InactiveUsers / Model.TotalUsers * 100, 1) : 0)%</strong></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5. TỔNG USERS -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #f3e8ff; color: #9333ea;">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold">@Model.TotalUsers</div>
+                <div class="text-muted small">Tổng Người dùng</div>
+                <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                    <i class="fas fa-shield me-1"></i>@Model.TotalRoles Vai trò
+                </div>
+            </div>
+        </div>
+
+        <!-- 6. ĐỀ THI & LƯỢT THI -->
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #fef3c7; color: #b45309;">
+                <i class="fas fa-clipboard-list"></i>
+            </div>
+            <div>
+                <div class="h4 mb-0 fw-bold">@Model.TotalExams</div>
+                <div class="text-muted small">Đề thi trực tuyến</div>
+                <div class="small text-muted mt-1" style="font-size: 0.75rem;">
+                    <i class="fas fa-paper-plane me-1"></i>@Model.TotalSubmissions lượt nộp
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Dashboard Layout -->
+    <div class="dashboard-layout">
+        <!-- Main Column: Subjects & Users Overview -->
+        <div>
+            <!-- Môn học gần đây & phân công giáo viên -->
+            <div class="adm-panel">
+                <div class="adm-panel-header">
+                    <h2 class="h6 mb-0 fw-bold text-dark">
+                        <i class="fas fa-book text-primary me-2"></i>Môn học & Phân công Giảng viên
+                    </h2>
+                    <a href="~/Admin/Subjects" class="btn btn-sm btn-outline-primary">
+                        Xem tất cả môn <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                @if (!Model.SubjectsSummary.Any())
+                {
+                    <div class="text-center py-4 text-muted small">
+                        Chưa có môn học nào được tạo.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="adm-table">
+                            <thead>
+                                <tr>
+                                    <th>Môn học</th>
+                                    <th>Giáo viên phụ trách</th>
+                                    <th class="text-center">Đề thi</th>
+                                    <th class="text-center">Học viên</th>
+                                    <th class="text-center">Trạng thái</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in Model.SubjectsSummary)
+                                {
+                                    <tr>
+                                        <td class="fw-bold">
+                                            <a href="~/Admin/Subjects" class="text-decoration-none text-dark">@s.Name</a>
+                                        </td>
+                                        <td>
+                                            @if (s.TeacherNames.Any())
+                                            {
+                                                <div class="d-flex flex-wrap gap-1">
+                                                    @foreach (var tn in s.TeacherNames)
+                                                    {
+                                                        <span class="badge bg-light text-dark border">
+                                                            <i class="fas fa-chalkboard-teacher me-1 text-primary"></i>@tn
+                                                        </span>
+                                                    }
+                                                </div>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-warning text-dark">Chưa gán GV</span>
+                                            }
+                                        </td>
+                                        <td class="text-center">@s.ExamCount</td>
+                                        <td class="text-center fw-bold text-primary">@s.StudentCount</td>
+                                        <td class="text-center">
+                                            @if (s.IsActive)
+                                            {
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">Đang mở</span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-secondary bg-opacity-10 text-secondary border border-secondary border-opacity-25">Đã đóng</span>
+                                            }
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <!-- Người dùng mới đăng ký -->
+            <div class="adm-panel">
+                <div class="adm-panel-header">
+                    <h2 class="h6 mb-0 fw-bold text-dark">
+                        <i class="fas fa-users text-info me-2"></i>Tài khoản người dùng mới
+                    </h2>
+                    <a href="/Identity/Users" class="btn btn-sm btn-outline-secondary">
+                        Quản trị người dùng <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                @if (!Model.RecentUsers.Any())
+                {
+                    <div class="text-center py-4 text-muted small">
+                        Chưa có người dùng nào.
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="adm-table">
+                            <thead>
+                                <tr>
+                                    <th>Tên / Username</th>
+                                    <th>Email</th>
+                                    <th class="text-center">Trạng thái</th>
+                                    <th>Ngày tạo</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var u in Model.RecentUsers)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold text-dark">@(!string.IsNullOrEmpty(u.Name) ? u.Name : u.UserName)</div>
+                                            <div class="text-muted small">@@@u.UserName</div>
+                                        </td>
+                                        <td class="text-muted small">@(u.Email ?? "—")</td>
+                                        <td class="text-center">
+                                            @if (u.IsActive)
+                                            {
+                                                <span class="badge bg-success bg-opacity-10 text-success border border-success border-opacity-25">
+                                                    <i class="fas fa-check-circle me-1"></i> Active
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge bg-danger bg-opacity-10 text-danger border border-danger border-opacity-25">
+                                                    <i class="fas fa-times-circle me-1"></i> Inactive
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="text-muted small">
+                                            @u.CreationTime.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Sidebar Column: Quick Links & System Info -->
+        <div>
+            <!-- Phím tắt quản trị -->
+            <div class="adm-panel">
+                <div class="adm-panel-header">
+                    <h3 class="h6 mb-0 fw-bold text-dark">
+                        <i class="fas fa-bolt text-warning me-2"></i>Tác vụ nhanh
+                    </h3>
+                </div>
+
+                <a href="~/Admin/Subjects" class="quick-link-box">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded bg-primary bg-opacity-10 text-primary">
+                            <i class="fas fa-book-bookmark"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Quản lý Môn học</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Phân công giáo viên & môn</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted small"></i>
+                </a>
+
+                <a href="/Identity/Users" class="quick-link-box">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded bg-success bg-opacity-10 text-success">
+                            <i class="fas fa-user-plus"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Tài khoản & User</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Active / Inactive, Reset Pass</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted small"></i>
+                </a>
+
+                <a href="/Identity/Roles" class="quick-link-box">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded bg-info bg-opacity-10 text-info">
+                            <i class="fas fa-shield-alt"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Vai trò & Quyền hạn</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Role Teacher, Admin, Static</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted small"></i>
+                </a>
+
+                <a href="~/Teacher" class="quick-link-box">
+                    <div class="d-flex align-items-center gap-2">
+                        <div class="p-2 rounded bg-purple bg-opacity-10 text-purple" style="color: #9333ea;">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Dashboard Giảng viên</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Đề thi, câu hỏi, lớp học</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted small"></i>
+                </a>
+            </div>
+
+            <!-- Thông tin Máy chủ & Hệ thống -->
+            <div class="adm-panel">
+                <div class="adm-panel-header">
+                    <h3 class="h6 mb-0 fw-bold text-dark">
+                        <i class="fas fa-server text-secondary me-2"></i>Môi trường Hệ thống
+                    </h3>
+                </div>
+                <div class="small text-muted">
+                    <p class="mb-2">
+                        <i class="fas fa-microchip me-1"></i> <strong>OS:</strong> @Model.OsDescription
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-cubes me-1"></i> <strong>Runtime:</strong> @Model.FrameworkDescription
+                    </p>
+                    <p class="mb-2">
+                        <i class="fas fa-desktop me-1"></i> <strong>Machine:</strong> @Model.MachineName
+                    </p>
+                    <p class="mb-0">
+                        <i class="fas fa-clock me-1"></i> <strong>UTC:</strong> @Model.ServerTime.ToString("yyyy-MM-dd HH:mm:ss")
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
