@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
@@ -31,5 +33,41 @@ public class IndexModel : AbpPageModel
 
         MyCourses = await _learningAppService.GetMyCoursesAsync();
         return Page();
+    }
+
+    public async Task<IActionResult> OnPostUnregisterAsync(long subjectId)
+    {
+        if (!IsAuthenticated)
+        {
+            return Redirect("/Account/Login");
+        }
+
+        try
+        {
+            // Chỉ cho phép hủy nếu chưa học bài nào
+            var courses = await _learningAppService.GetMyCoursesAsync();
+            var course = courses.FirstOrDefault(c => c.Id == subjectId);
+
+            if (course == null)
+            {
+                TempData["Error"] = "Không tìm thấy môn học đã đăng ký.";
+                return RedirectToPage("./Index");
+            }
+
+            if (course.CompletedLessons > 0)
+            {
+                TempData["Error"] = $"Không thể hủy đăng ký '{course.Name}' vì bạn đã hoàn thành {course.CompletedLessons} bài học.";
+                return RedirectToPage("./Index");
+            }
+
+            await _learningAppService.UnregisterSubjectAsync(subjectId);
+            TempData["Success"] = $"Đã hủy đăng ký môn học '{course.Name}'.";
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+        }
+
+        return RedirectToPage("./Index");
     }
 }

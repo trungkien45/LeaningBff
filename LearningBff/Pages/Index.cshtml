@@ -41,7 +41,7 @@
                 </div>
             }
 
-            @if (CurrentUser.IsInRole("teacher") || CurrentUser.IsInRole("Teacher") || CurrentUser.IsInRole("admin") || CurrentUser.IsInRole("Admin"))
+            @if (CurrentUser.IsInRole("teacher") || CurrentUser.IsInRole("Teacher"))
             {
                 <div class="admin-section mb-3 mx-auto" style="max-width: 650px;">
                     <div class="admin-section-label mb-2">
@@ -49,11 +49,25 @@
                     </div>
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
                         <a href="/Teacher" class="btn btn-warning btn-md px-4 fw-bold">
-                            <i class="fa-solid fa-gauge-high me-2"></i>Khu vực Quản lý Giảng viên
+                            <i class="fa-solid fa-gauge-high me-2"></i>Khu vực Quản lý của Giảng viên
                         </a>
                     </div>
                 </div>
             }
+            @if (CurrentUser.IsInRole("admin") || CurrentUser.IsInRole("Admin"))
+            {
+                <div class="admin-section mb-3 mx-auto" style="max-width: 650px;">
+                    <div class="admin-section-label mb-2">
+                        <i class="fa-solid fa-chalkboard-user me-1"></i>Dành cho Quản trị viên
+                    </div>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap">
+                        <a href="/Admin" class="btn btn-warning btn-md px-4 fw-bold">
+                            <i class="fa-solid fa-gauge-high me-2"></i>Khu vực Quản lý của Quản trị viên
+                        </a>
+                    </div>
+                </div>
+            }
+
 
             @if (CurrentUser.IsAuthenticated)
             {

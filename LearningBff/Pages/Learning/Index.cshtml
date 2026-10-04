@@ -1,5 +1,6 @@
 @page
 @model LearningBff.Pages.Learning.IndexModel
+@inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     ViewData["Title"] = "Không gian Học trực tuyến";
 }
@@ -140,7 +141,80 @@
         font-weight: 600;
         margin-bottom: 0.75rem;
     }
+
+    /* Toast */
+    .toast-container-custom {
+        position: fixed;
+        top: 1.25rem;
+        right: 1.25rem;
+        z-index: 9999;
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    .toast-item {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        padding: 0.9rem 1.25rem;
+        border-radius: 0.75rem;
+        box-shadow: 0 8px 24px rgba(0,0,0,0.12);
+        font-weight: 600;
+        font-size: 0.95rem;
+        min-width: 280px;
+        max-width: 400px;
+        animation: toastIn 0.3s ease;
+    }
+    .toast-success { background: #f0fdf4; color: #166534; border: 1px solid #bbf7d0; }
+    .toast-error   { background: #fef2f2; color: #991b1b; border: 1px solid #fecaca; }
+    @@keyframes toastIn {
+        from { opacity: 0; transform: translateX(30px); }
+        to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* Unenroll confirm modal */
+    .unenroll-overlay {
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(15,23,42,0.55);
+        backdrop-filter: blur(4px);
+        z-index: 1055;
+        align-items: center;
+        justify-content: center;
+    }
+    .unenroll-overlay.active { display: flex; }
+    .unenroll-card {
+        background: #ffffff;
+        border-radius: 1.25rem;
+        box-shadow: 0 20px 60px rgba(0,0,0,0.18);
+        padding: 2rem;
+        max-width: 440px;
+        width: 90%;
+        animation: modalIn 0.25s ease;
+    }
+    @@keyframes modalIn {
+        from { opacity: 0; transform: scale(0.93); }
+        to   { opacity: 1; transform: scale(1); }
+    }
 </style>
+
+@if (TempData["Success"] != null)
+{
+    <div class="toast-container-custom" id="toastBox">
+        <div class="toast-item toast-success">
+            <i class="fas fa-check-circle"></i> @TempData["Success"]
+        </div>
+    </div>
+}
+@if (TempData["Error"] != null)
+{
+    <div class="toast-container-custom" id="toastBox">
+        <div class="toast-item toast-error">
+            <i class="fas fa-exclamation-circle"></i> @TempData["Error"]
+        </div>
+    </div>
+}
 
 <div class="learning-container">
     <div class="learn-hero">
@@ -238,10 +312,18 @@
                                 </div>
                             </div>
 
-                            <div class="d-grid mt-auto">
+                            <div class="d-grid mt-auto gap-2">
                                 <a href="/Learning/Subject?subjectId=@course.Id" class="btn btn-primary fw-bold py-2 shadow-sm">
                                     <i class="fas fa-play-circle me-1"></i> @(course.CompletedLessons > 0 ? "Tiếp tục học" : "Vào học ngay")
                                 </a>
+                                @if (course.CompletedLessons == 0)
+                                {
+                                    <button type="button"
+                                            class="btn btn-outline-danger btn-sm fw-semibold"
+                                            onclick="confirmUnenroll(@course.Id, '@Html.Raw(course.Name.Replace("'", "\'"))')">
+                                        <i class="fas fa-times me-1"></i> Hủy đăng ký
+                                    </button>
+                                }
                             </div>
                         </div>
                     </div>
@@ -250,3 +332,54 @@
         </div>
     }
 </div>
+
+@* Confirm unenroll modal *@
+<div id="unenrollOverlay" class="unenroll-overlay">
+    <div class="unenroll-card">
+        <div class="d-flex align-items-center gap-3 mb-3">
+            <div style="width:48px;height:48px;border-radius:50%;background:#fee2e2;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+                <i class="fas fa-sign-out-alt text-danger" style="font-size:1.3rem;"></i>
+            </div>
+            <div>
+                <h5 class="fw-bold mb-0">Hủy đăng ký môn học?</h5>
+                <p class="text-muted small mb-0">Hành động này không thể hoàn tác.</p>
+            </div>
+        </div>
+        <p class="text-muted mb-4">Bạn sắp hủy đăng ký môn <strong id="unenrollSubjectName"></strong>. Bạn có thể đăng ký lại từ trang danh mục môn học.</p>
+        <form method="post" id="unenrollForm" asp-page-handler="Unregister">
+            @Html.AntiForgeryToken()
+            <input type="hidden" id="unenrollSubjectId" name="subjectId" value="0" />
+            <div class="d-flex gap-2 justify-content-end">
+                <button type="button" class="btn btn-outline-secondary px-4"
+                        onclick="closeUnenrollModal()">Hủy bỏ</button>
+                <button type="submit" class="btn btn-danger px-4 fw-semibold">
+                    <i class="fas fa-sign-out-alt me-1"></i> Xác nhận hủy
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section scripts {
+<script>
+    // ── Unenroll confirm modal ──────────────────────────
+    function confirmUnenroll(subjectId, subjectName) {
+        document.getElementById('unenrollSubjectId').value = subjectId;
+        document.getElementById('unenrollSubjectName').textContent = subjectName;
+        document.getElementById('unenrollOverlay').classList.add('active');
+    }
+    function closeUnenrollModal() {
+        document.getElementById('unenrollOverlay').classList.remove('active');
+    }
+
+    // ── Toast auto-dismiss after 4s ──────────────────────
+    var toast = document.getElementById('toastBox');
+    if (toast) {
+        setTimeout(function () {
+            toast.style.transition = 'opacity 0.4s ease';
+            toast.style.opacity = '0';
+            setTimeout(function () { toast.remove(); }, 400);
+        }, 4000);
+    }
+</script>
+}
