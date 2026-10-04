@@ -169,8 +169,9 @@ function openEditModal(id) {
 function closeModal(id) {
     document.getElementById(id).style.display = 'none';
 }
-document.querySelectorAll('.modal-overlay').forEach(o => {
-    o.addEventListener('click', e => { if (e.target === o) o.style.display = 'none'; });
-});
+// Static backdrop: Bấm ra ngoài không tắt modal (chỉ đóng khi bấm nút close, cancel, ok)
+// document.querySelectorAll('.modal-overlay').forEach(o => {
+//     o.addEventListener('click', e => { if (e.target === o) o.style.display = 'none'; });
+// });
 </script>
 }

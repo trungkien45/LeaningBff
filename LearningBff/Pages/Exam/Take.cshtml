@@ -230,7 +230,7 @@
 </div>
 
 @* MODAL CONFIRM SUBMIT *@
-<div class="modal fade" id="submitConfirmModal" tabindex="-1" aria-hidden="true">
+<div class="modal fade" id="submitConfirmModal" data-bs-backdrop="static" data-bs-keyboard="false" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered">
         <div class="modal-content rounded-4 border-0 shadow">
             <div class="modal-header border-0 pb-0">
@@ -330,7 +330,10 @@
             $('#modalAnsweredText').text('Đã làm: ' + answeredCount + ' / ' + totalQuestions + ' câu hỏi');
             $('#modalUnansweredText').text('Còn lại: ' + unansweredCount + ' câu chưa trả lời');
 
-            var modal = new bootstrap.Modal(document.getElementById('submitConfirmModal'));
+            var modal = new bootstrap.Modal(document.getElementById('submitConfirmModal'), {
+                backdrop: 'static',
+                keyboard: false
+            });
             modal.show();
         }
 

@@ -369,8 +369,9 @@ document.getElementById('examSubjectId').addEventListener('change', () => {
     renderQuestionPicker();
     loadQuestionBank(true);
 });
-document.querySelectorAll('.modal-overlay').forEach(o => {
-    o.addEventListener('click', e => { if (e.target === o) o.style.display = 'none'; });
-});
+// Static backdrop: Bấm ra ngoài không tắt modal (chỉ đóng khi bấm nút close, cancel, ok)
+// document.querySelectorAll('.modal-overlay').forEach(o => {
+//     o.addEventListener('click', e => { if (e.target === o) o.style.display = 'none'; });
+// });
 </script>
 }
