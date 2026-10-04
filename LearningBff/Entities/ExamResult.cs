@@ -9,6 +9,7 @@ namespace LearningBff.Entities;
 public class ExamResult : FullAuditedAggregateRoot<long>
 {
     public long ExamId { get; set; }
+    public string? ExamTitle { get; set; }
     public Exam? Exam { get; set; }
 
     public List<ExamResultAnswer> ExamResultAnswers { get; set; } = [];

@@ -2,92 +2,88 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
+using Volo.Abp.Users;
 using LearningBff.Services;
 using LearningBff.Services.Dtos;
 
 namespace LearningBff.Pages.Exam;
 
-[Authorize]
-public class TakeModel : PageModel
+public class TakeModel : AbpPageModel
 {
-    private readonly ExamAppService       _examService;
-    private readonly ExamResultAppService _resultService;
+    private readonly ExamAppService _examAppService;
+    private readonly ICurrentUser _currentUser;
 
-    public ExamDto?              Exam             { get; set; }
-    public List<ExamQuestionDto> Questions        { get; set; } = new();
-    public long                  ResultId         { get; set; }
-    public DateTime              StartTime        { get; set; }
-    public int                   RemainingSeconds { get; set; }
-
-    public TakeModel(ExamAppService examService, ExamResultAppService resultService)
+    public TakeModel(ExamAppService examAppService, ICurrentUser currentUser)
     {
-        _examService   = examService;
-        _resultService = resultService;
+        _examAppService = examAppService;
+        _currentUser = currentUser;
     }
 
-    public async Task<IActionResult> OnGetAsync(long id)
+    public ExamTakeDto ExamData { get; set; } = null!;
+    public bool IsAuthenticated => _currentUser.IsAuthenticated;
+
+    public async Task<IActionResult> OnGetAsync(long resultId)
     {
-        // id = ExamResultId
-        ResultId = id;
-        var result = await _resultService.GetResultAsync(id);
-
-        if (result.Status != Entities.ExamResultStatus.InProgress)
-            return RedirectToPage("/Exam/Result", new { id });
-
-        Exam      = await _examService.GetAsync(result.ExamId);
-        var startTimeUtc = DateTime.SpecifyKind(result.StartTime, DateTimeKind.Utc);
-        StartTime = startTimeUtc;
-
-        var elapsedSeconds = (int)(DateTime.UtcNow - startTimeUtc).TotalSeconds;
-        var totalDurationSeconds = (Exam.DurationInMinutes > 0 ? Exam.DurationInMinutes : 45) * 60;
-        RemainingSeconds = Math.Max(0, totalDurationSeconds - elapsedSeconds);
-
-        if (RemainingSeconds <= 0)
+        if (!IsAuthenticated)
         {
-            // Auto submit empty if time expired
-            await _resultService.SubmitExamAsync(new SubmitExamDto
-            {
-                ExamResultId = id,
-                Answers = new List<StudentAnswerDto>()
-            });
-            return RedirectToPage("/Exam/Result", new { id });
+            return Redirect("/Account/Login");
         }
 
-        // Shuffle if needed
-        Questions = Exam.ExamQuestions.ToList();
-
-        return Page();
-    }
-
-    public async Task<IActionResult> OnPostSubmitAsync(long ExamResultId, List<StudentAnswerInput> Answers)
-    {
         try
         {
-            var dto = new SubmitExamDto
-            {
-                ExamResultId = ExamResultId,
-                Answers      = Answers.Select(a => new StudentAnswerDto
-                {
-                    QuestionId        = a.QuestionId,
-                    SelectedAnswerIds = a.SelectedAnswerIds ?? new()
-                }).ToList()
-            };
-            var result = await _resultService.SubmitExamAsync(dto);
-            return RedirectToPage("/Exam/Result", new { id = result.Id });
+            ExamData = await _examAppService.GetForTakeAsync(resultId);
+            return Page();
         }
         catch (Exception ex)
         {
             TempData["Error"] = ex.Message;
-            return RedirectToPage(new { id = ExamResultId });
+            return RedirectToPage("/Exam/Index");
         }
     }
 
-    public class StudentAnswerInput
+    public async Task<IActionResult> OnPostSubmitAsync(long examResultId, string? answersJson)
     {
-        public long QuestionId { get; set; }
-        public List<long>? SelectedAnswerIds { get; set; }
+        if (!IsAuthenticated)
+        {
+            return Redirect("/Account/Login");
+        }
+
+        try
+        {
+            var submitDto = new SubmitExamDto
+            {
+                ExamResultId = examResultId,
+                Answers = new List<StudentAnswerDto>()
+            };
+
+            if (!string.IsNullOrWhiteSpace(answersJson))
+            {
+                var dict = System.Text.Json.JsonSerializer.Deserialize<Dictionary<string, List<long>>>(answersJson);
+                if (dict != null)
+                {
+                    foreach (var kvp in dict)
+                    {
+                        if (long.TryParse(kvp.Key, out var qId))
+                        {
+                            submitDto.Answers.Add(new StudentAnswerDto
+                            {
+                                QuestionId = qId,
+                                SelectedAnswerIds = kvp.Value
+                            });
+                        }
+                    }
+                }
+            }
+
+            var result = await _examAppService.SubmitExamAsync(submitDto);
+            return RedirectToPage("/Exam/Result", new { resultId = result.Id });
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToPage("/Exam/Index");
+        }
     }
 }

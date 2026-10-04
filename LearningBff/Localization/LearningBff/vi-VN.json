@@ -1,11 +1,12 @@
 {
   "Culture": "vi-VN",
   "texts": {
-    "AppName": "Thi thử trắc nghiệm trực tuyến",
-    "Welcome_Title": "Chào mừng đến với Thi thử trắc nghiệm trực tuyến",
-    "Welcome_Text": "Đây là hệ thống thi thử trắc nghiệm trực tuyến",
+    "AppName": "Học tập trực tuyến",
+    "Welcome_Title": "Chào mừng đến với Hệ thống học tập trực tuyến",
+    "Welcome_Text": "Đây là hệ thống học tập trực tuyến",
     "Login": "Đăng Nhập",
     "Menu:Home": "Trang chủ",
+    "Menu:Teacher": "Giáo viên",
     "Menu:Admin": "Vùng Quản trị",
     "Admin:Title": "Vùng Quản trị Hệ thống",
     "Admin:Subtitle": "Bảng điều khiển trung tâm dành riêng cho Quản trị viên (Admin)",

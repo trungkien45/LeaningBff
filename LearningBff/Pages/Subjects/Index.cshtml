@@ -4,76 +4,176 @@
     ViewData["Title"] = "Đăng ký môn học";
 }
 
+<style>
+    .subject-catalog-header {
+        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+        border-radius: 1.25rem;
+        padding: 2.5rem 2rem;
+        color: #ffffff;
+        margin-bottom: 2rem;
+        box-shadow: 0 10px 25px -5px rgba(15, 23, 42, 0.2);
+    }
+    .catalog-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        border: 1px solid #e2e8f0;
+        overflow: hidden;
+        transition: all 0.25s ease;
+        display: flex;
+        flex-direction: column;
+        height: 100%;
+        box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);
+    }
+    .catalog-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 16px 24px -6px rgba(0, 0, 0, 0.08);
+        border-color: #cbd5e1;
+    }
+    .catalog-card-header {
+        padding: 1.5rem;
+        background: linear-gradient(135deg, #3b82f6 0%, #1d4ed8 100%);
+        color: white;
+    }
+    .catalog-card-body {
+        padding: 1.5rem;
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+    }
+    .teacher-badge {
+        background: #f1f5f9;
+        color: #334155;
+        border-radius: 9999px;
+        padding: 0.35rem 0.85rem;
+        font-size: 0.825rem;
+        font-weight: 500;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+</style>
+
 <div class="container py-4">
-    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
-        <div>
-            <h1 class="h3 mb-1">Đăng ký môn học</h1>
-            <p class="text-muted mb-0">Chọn các môn bạn muốn theo học.</p>
+    <div class="subject-catalog-header">
+        <div class="row align-items-center g-3">
+            <div class="col-lg-8">
+                <h1 class="h2 fw-bold mb-2"><i class="fas fa-book-open me-2 text-primary"></i> Khám phá & Đăng ký môn học</h1>
+                <p class="text-light opacity-75 mb-0">Lựa chọn các môn học phù hợp với chương trình để bắt đầu lộ trình học tập và kiểm tra trực tuyến.</p>
+            </div>
+            <div class="col-lg-4 text-lg-end">
+                <span class="badge bg-primary bg-opacity-25 border border-primary px-3 py-2 fs-6">
+                    Đã đăng ký: <strong>@Model.Subjects.Count(s => s.IsEnrolled)</strong> / @Model.Subjects.Count môn
+                </span>
+            </div>
         </div>
-        <span class="badge bg-primary">Đã đăng ký: @Model.Subjects.Count(x => x.IsRegistered)</span>
+
+        <div class="mt-4">
+            <form method="get" class="d-flex gap-2" style="max-width: 550px;">
+                <div class="input-group">
+                    <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
+                    <input type="text" name="search" value="@Model.Search" class="form-control border-0 py-2" placeholder="Tìm kiếm tên môn học, mô tả..." />
+                    @if (!string.IsNullOrEmpty(Model.Search))
+                    {
+                        <a href="/Subjects" class="btn btn-light border-0"><i class="fas fa-times"></i></a>
+                    }
+                </div>
+                <button type="submit" class="btn btn-primary px-4 fw-semibold">Tìm</button>
+            </form>
+        </div>
     </div>
 
     @if (TempData["Success"] != null)
     {
-        <div class="alert alert-success" role="status">@TempData["Success"]</div>
+        <div class="alert alert-success alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+            <i class="fas fa-check-circle me-2"></i> @TempData["Success"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     }
     @if (TempData["Error"] != null)
     {
-        <div class="alert alert-danger" role="alert">@TempData["Error"]</div>
+        <div class="alert alert-danger alert-dismissible fade show rounded-3 shadow-sm" role="alert">
+            <i class="fas fa-exclamation-triangle me-2"></i> @TempData["Error"]
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
     }
 
     @if (!Model.Subjects.Any())
     {
-        <div class="alert alert-info">Hiện chưa có môn học nào được mở đăng ký.</div>
+        <div class="card p-5 text-center border-0 shadow-sm rounded-4 my-4">
+            <i class="fas fa-inbox fa-3x text-muted opacity-50 mb-3"></i>
+            <h4 class="fw-bold mb-1">Không tìm thấy môn học nào</h4>
+            <p class="text-muted">Vui lòng thử tìm kiếm lại với từ khóa khác.</p>
+        </div>
     }
     else
     {
-        <div class="table-responsive">
-            <table class="table table-hover align-middle">
-                <thead>
-                    <tr>
-                        <th>Môn học</th>
-                        <th>Mô tả</th>
-                        <th>Trạng thái</th>
-                        <th class="text-end">Thao tác</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @foreach (var subject in Model.Subjects)
-                    {
-                        <tr>
-                            <td class="fw-semibold">@subject.Name</td>
-                            <td>@(string.IsNullOrWhiteSpace(subject.Description) ? "Chưa có mô tả" : subject.Description)</td>
-                            <td>
-                                @if (subject.IsRegistered)
+        <div class="row g-4">
+            @foreach (var s in Model.Subjects)
+            {
+                <div class="col-md-6 col-lg-4">
+                    <div class="catalog-card">
+                        <div class="catalog-card-header d-flex justify-content-between align-items-start">
+                            <div>
+                                <h2 class="h5 fw-bold mb-1 text-white text-truncate" title="@s.Name">@s.Name</h2>
+                                <span class="badge @(s.IsEnrolled ? "bg-success" : "bg-light text-dark")">
+                                    @(s.IsEnrolled ? "✓ Đã đăng ký" : "Chưa đăng ký")
+                                </span>
+                            </div>
+                            <i class="fas fa-graduation-cap fa-2x opacity-50"></i>
+                        </div>
+                        <div class="catalog-card-body">
+                            <p class="text-muted small flex-grow-1" style="min-height: 48px;">
+                                @(string.IsNullOrWhiteSpace(s.Description) ? "Khóa học trực tuyến với cấu trúc bài học và hệ thống câu hỏi kiểm tra đầy đủ." : s.Description)
+                            </p>
+
+                            @if (s.Teachers.Any())
+                            {
+                                <div class="mb-3">
+                                    <div class="small fw-semibold text-muted mb-1">Giảng viên:</div>
+                                    <div class="d-flex flex-wrap gap-1">
+                                        @foreach (var t in s.Teachers)
+                                        {
+                                            <span class="teacher-badge"><i class="fas fa-user-tie text-primary"></i> @(t.Name ?? t.UserName)</span>
+                                        }
+                                    </div>
+                                </div>
+                            }
+
+                            <div class="d-flex justify-content-between text-muted small py-2 border-top border-bottom mb-3">
+                                <span><i class="fas fa-layer-group text-primary"></i> <strong>@s.TotalChapters</strong> chương</span>
+                                <span><i class="fas fa-book text-info"></i> <strong>@s.TotalLessons</strong> bài học</span>
+                                <span><i class="fas fa-file-pen text-warning"></i> <strong>@s.TotalExams</strong> đề thi</span>
+                            </div>
+
+                            <div class="mt-auto pt-2">
+                                @if (s.IsEnrolled)
                                 {
-                                    <span class="badge bg-success">Đã đăng ký</span>
+                                    <div class="d-flex gap-2">
+                                        <a href="/Learning?subjectId=@s.Id" class="btn btn-primary flex-grow-1 fw-bold shadow-sm">
+                                            <i class="fas fa-play-circle me-1"></i> Vào học ngay
+                                        </a>
+                                        <form method="post" asp-page-handler="Unregister" onsubmit="return confirm('Bạn có chắc chắn muốn hủy đăng ký môn học này?');">
+                                            <input type="hidden" name="subjectId" value="@s.Id" />
+                                            <button type="submit" class="btn btn-outline-danger" title="Hủy đăng ký">
+                                                <i class="fas fa-times"></i>
+                                            </button>
+                                        </form>
+                                    </div>
                                 }
                                 else
                                 {
-                                    <span class="badge bg-secondary">Chưa đăng ký</span>
-                                }
-                            </td>
-                            <td class="text-end">
-                                @if (subject.IsRegistered)
-                                {
-                                    <form method="post" asp-page-handler="Unregister" class="d-inline">
-                                        <input type="hidden" name="subjectId" value="@subject.Id" />
-                                        <button type="submit" class="btn btn-outline-danger btn-sm">Hủy đăng ký</button>
+                                    <form method="post" asp-page-handler="Register">
+                                        <input type="hidden" name="subjectId" value="@s.Id" />
+                                        <button type="submit" class="btn btn-outline-primary w-100 fw-bold">
+                                            <i class="fas fa-plus-circle me-1"></i> Đăng ký môn này
+                                        </button>
                                     </form>
                                 }
-                                else
-                                {
-                                    <form method="post" asp-page-handler="Register" class="d-inline">
-                                        <input type="hidden" name="subjectId" value="@subject.Id" />
-                                        <button type="submit" class="btn btn-primary btn-sm">Đăng ký</button>
-                                    </form>
-                                }
-                            </td>
-                        </tr>
-                    }
-                </tbody>
-            </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            }
         </div>
     }
 </div>

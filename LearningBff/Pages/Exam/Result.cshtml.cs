@@ -1,46 +1,62 @@
-using System.Linq;
+using System;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
+using Volo.Abp.Users;
 using LearningBff.Services;
 using LearningBff.Services.Dtos;
 
 namespace LearningBff.Pages.Exam;
 
-[Authorize]
-public class ResultModel : PageModel
+public class ResultModel : AbpPageModel
 {
-    private readonly ExamResultAppService _resultService;
+    private readonly ExamAppService _examAppService;
+    private readonly ICurrentUser _currentUser;
 
-    public ExamResultDto? Result { get; set; }
-    public bool CanRetake { get; set; }
-    public int CorrectCount => Result?.Questions.Count(q => q.IsCorrect) ?? 0;
-    public int TotalCount   => Result?.Questions.Count ?? 0;
-
-    public ResultModel(ExamResultAppService resultService)
+    public ResultModel(ExamAppService examAppService, ICurrentUser currentUser)
     {
-        _resultService = resultService;
+        _examAppService = examAppService;
+        _currentUser = currentUser;
     }
 
-    public async Task<IActionResult> OnGetAsync(long id)
-    {
-        Result = await _resultService.GetResultAsync(id);
-        CanRetake = await _resultService.CanRetakeAsync(id);
-        return Page();
-    }
+    public ExamResultDto ResultData { get; set; } = null!;
+    public bool IsAuthenticated => _currentUser.IsAuthenticated;
 
-    public async Task<IActionResult> OnPostRetryAsync(long id)
+    public async Task<IActionResult> OnGetAsync(long resultId)
     {
+        if (!IsAuthenticated)
+        {
+            return Redirect("/Account/Login");
+        }
+
         try
         {
-            var resultId = await _resultService.StartRetakeAsync(id);
-            return RedirectToPage("/Exam/Take", new { id = resultId });
+            ResultData = await _examAppService.GetResultAsync(resultId);
+            return Page();
         }
         catch (Exception ex)
         {
             TempData["Error"] = ex.Message;
-            return RedirectToPage(new { id });
+            return RedirectToPage("/Exam/Index");
+        }
+    }
+
+    public async Task<IActionResult> OnPostRetakeAsync(long examId)
+    {
+        if (!IsAuthenticated)
+        {
+            return Redirect("/Account/Login");
+        }
+
+        try
+        {
+            var newResultId = await _examAppService.StartExamAsync(examId);
+            return RedirectToPage("/Exam/Take", new { resultId = newResultId });
+        }
+        catch (Exception ex)
+        {
+            TempData["Error"] = ex.Message;
+            return RedirectToPage("/Exam/Index");
         }
     }
 }

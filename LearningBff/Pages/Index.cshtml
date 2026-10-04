@@ -9,18 +9,9 @@
 @inject ICurrentUser CurrentUser
 @inject IPageLayout PageLayout
 @{
-    PageLayout.Content.Title = L["Menu:Home"].Value;
-
-
-
+    PageLayout.Content.Title = L["AppName"].Value;
     PageLayout.Content.BreadCrumb.ShowCurrent = false;
-
-
-
     PageLayout.Content.ShowToolbar = false;
-
-
-
     PageLayout.Content.MenuItemName = LearningBffMenus.Home;
 }
 
@@ -34,44 +25,95 @@
 <div class="home-page">
     @* Hero Section *@
     <div class="hero-section card mb-4">
-        <div class="card-body text-center py-5">
+        <div class="card-body text-center py-5 px-3">
             <i class="fa-solid fa-graduation-cap hero-icon mb-3"></i>
-            <h1 class="hero-title mb-2">Hệ thống thi thử trắc nghiệm trực tuyến</h1>
-            <p class="hero-subtitle text-muted mb-4">Nền tảng tổ chức thi thử trắc nghiệm và quản lý bài thi hiệu quả, chuyên
-                nghiệp.</p>
+            <h1 class="hero-title mb-2">@L["AppName"].Value</h1>
+            <p class="hero-subtitle text-muted mb-4 mx-auto" style="max-width: 680px;">
+                Nền tảng học tập trực tuyến toàn diện — lộ trình bài giảng bài bản theo chương mục, tài liệu phong phú và bài thi trắc nghiệm đánh giá năng lực tự động.
+            </p>
 
             @if (!CurrentUser.IsAuthenticated)
             {
-                <a href="/Account/Login" class="btn btn-primary btn-lg px-5">
-                    <i class="fa-solid fa-right-to-bracket me-2"></i>Đăng nhập để bắt đầu
-                </a>
+                <div class="d-flex justify-content-center gap-3 flex-wrap">
+                    <a href="/Account/Login" class="btn btn-primary btn-lg px-5 shadow-sm fw-bold">
+                        <i class="fa-solid fa-right-to-bracket me-2"></i>Đăng nhập để bắt đầu
+                    </a>
+                </div>
             }
-            else if (CurrentUser.IsInRole("admin"))
+
+            @if (CurrentUser.IsInRole("teacher") || CurrentUser.IsInRole("Teacher") || CurrentUser.IsInRole("admin") || CurrentUser.IsInRole("Admin"))
             {
-                <div class="admin-section mb-3">
+                <div class="admin-section mb-3 mx-auto" style="max-width: 650px;">
                     <div class="admin-section-label mb-2">
-                        <i class="fa-solid fa-shield-halved me-1"></i>Dành cho Quản trị viên
+                        <i class="fa-solid fa-chalkboard-user me-1"></i>Dành cho Giảng viên
                     </div>
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
-                        <a href="/Admin" class="btn btn-primary btn-lg px-4">
-                            <i class="fa-solid fa-gauge-high me-2"></i>Vào trang Quản trị
-                        </a>
-                        <a href="/Admin/Exams" class="btn btn-outline-primary btn-lg px-4">
-                            <i class="fa-solid fa-list-check me-2"></i>Danh sách bài thi
+                        <a href="/Teacher" class="btn btn-warning btn-md px-4 fw-bold">
+                            <i class="fa-solid fa-gauge-high me-2"></i>Khu vực Quản lý Giảng viên
                         </a>
                     </div>
                 </div>
             }
+
             @if (CurrentUser.IsAuthenticated)
             {
                 <div class="d-flex justify-content-center gap-3 flex-wrap">
-                    <a href="/Exam" class="btn btn-primary btn-lg px-4">
-                        <i class="fa-solid fa-pen-to-square me-2"></i>Danh sách bài thi
+                    <a href="/Learning" class="btn btn-primary btn-lg px-4 shadow-sm fw-bold">
+                        <i class="fa-solid fa-chalkboard-teacher me-2"></i>Vào Không gian Học tập
+                    </a>
+                    <a href="/Subjects" class="btn btn-outline-primary btn-lg px-4 fw-semibold">
+                        <i class="fa-solid fa-book-open me-2"></i>Đăng ký môn học
+                    </a>
+                    <a href="/Exam" class="btn btn-outline-secondary btn-lg px-4 fw-semibold">
+                        <i class="fa-solid fa-file-signature me-2"></i>Kỳ thi trực tuyến
                     </a>
                 </div>
             }
         </div>
     </div>
+
+    @* My Active Courses Section (If logged in and enrolled) *@
+    @if (Model.IsAuthenticated && Model.MyCourses.Any())
+    {
+        <div class="my-courses-section mb-5">
+            <div class="d-flex align-items-center justify-content-between mb-3">
+                <h2 class="h5 fw-bold mb-0">
+                    <i class="fa-solid fa-book-bookmark text-primary me-2"></i>Khóa học của bạn
+                </h2>
+                <a href="/Learning" class="small fw-semibold text-primary text-decoration-none">
+                    Xem tất cả (@Model.MyCourses.Count) <i class="fa-solid fa-arrow-right ms-1"></i>
+                </a>
+            </div>
+
+            <div class="row g-3">
+                @foreach (var course in Model.MyCourses.Take(3))
+                {
+                    <div class="col-md-4">
+                        <div class="card h-100 border shadow-sm rounded-3 overflow-hidden">
+                            <div class="card-body p-3 d-flex flex-column">
+                                <h3 class="h6 fw-bold mb-1 text-truncate" title="@course.Name">@course.Name</h3>
+                                <div class="small text-muted mb-2">
+                                    <i class="fa-solid fa-layer-group me-1 text-primary"></i>@course.TotalChapters chương · @course.TotalLessons bài
+                                </div>
+                                <div class="mt-auto">
+                                    <div class="d-flex justify-content-between small fw-semibold text-muted mb-1">
+                                        <span>Tiến độ:</span>
+                                        <span class="text-success">@course.ProgressPercentage%</span>
+                                    </div>
+                                    <div class="progress mb-3" style="height: 6px;">
+                                        <div class="progress-bar bg-success" style="width: @course.ProgressPercentage%;"></div>
+                                    </div>
+                                    <a href="/Learning?subjectId=@course.Id" class="btn btn-outline-primary btn-sm w-100 fw-bold">
+                                        <i class="fa-solid fa-play-circle me-1"></i>Tiếp tục học
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                }
+            </div>
+        </div>
+    }
 
     @* Feature Cards *@
     <div class="row g-4 mb-4">
@@ -79,11 +121,10 @@
             <div class="card feature-card h-100">
                 <div class="card-body text-center p-4">
                     <div class="feature-icon mb-3">
-                        <i class="fa-solid fa-clock-rotate-left"></i>
+                        <i class="fa-solid fa-book-open-reader"></i>
                     </div>
-                    <h5 class="card-title">Thi mọi lúc</h5>
-                    <p class="card-text text-muted">Làm bài thi trắc nghiệm trực tuyến linh hoạt theo lịch trình của bạn, mọi nơi
-                        mọi lúc.</p>
+                    <h3 class="card-title h5 fw-bold">Học tập tương tác</h3>
+                    <p class="card-text text-muted">Lộ trình bài giảng theo chương mục rõ ràng, đánh dấu và theo dõi tiến độ hoàn thành từng bài học trực quan.</p>
                 </div>
             </div>
         </div>
@@ -91,11 +132,10 @@
             <div class="card feature-card h-100">
                 <div class="card-body text-center p-4">
                     <div class="feature-icon mb-3">
-                        <i class="fa-solid fa-chart-line"></i>
+                        <i class="fa-solid fa-file-signature"></i>
                     </div>
-                    <h5 class="card-title">Kết quả tức thì</h5>
-                    <p class="card-text text-muted">Xem kết quả và đánh giá chi tiết ngay sau khi hoàn thành bài thi.
-                    </p>
+                    <h3 class="card-title h5 fw-bold">Khảo thí tự động</h3>
+                    <p class="card-text text-muted">Hệ thống bài thi trắc nghiệm theo chương và kết thúc môn, bấm giờ thực tế, chấm điểm và xem giải thích chi tiết.</p>
                 </div>
             </div>
         </div>
@@ -103,11 +143,10 @@
             <div class="card feature-card h-100">
                 <div class="card-body text-center p-4">
                     <div class="feature-icon mb-3">
-                        <i class="fa-solid fa-shield-halved"></i>
+                        <i class="fa-solid fa-user-graduate"></i>
                     </div>
-                    <h5 class="card-title">An toàn & Bảo mật</h5>
-                    <p class="card-text text-muted">Hệ thống xác thực nghiêm ngặt, đảm bảo tính công bằng và minh bạch.
-                    </p>
+                    <h3 class="card-title h5 fw-bold">Giảng viên đồng hành</h3>
+                    <p class="card-text text-muted">Đội ngũ giảng viên giàu chuyên môn phụ trách môn học, liên tục cập nhật bài giảng và ngân hàng câu hỏi chuẩn.</p>
                 </div>
             </div>
         </div>

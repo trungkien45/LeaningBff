@@ -196,6 +196,17 @@ public class LearningBffDbContext :
             b.HasMany(x => x.Exams).WithOne(x => x.Subject).HasForeignKey(x => x.SubjectId).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(b => b.Chapters).WithOne(x => x.Subject).HasForeignKey(x => x.SubjectId).OnDelete(DeleteBehavior.Cascade);
             b.HasMany(x => x.EnrollmentSubjects).WithOne(x => x.Subject).HasForeignKey(x => x.SubjectId).OnDelete(DeleteBehavior.Cascade);
+            b.HasMany(x => x.Teachers)
+                .WithMany()
+                .UsingEntity<Dictionary<string, object>>(
+                    "AppSubjectTeachers",
+                    j => j.HasOne<IdentityUser>().WithMany().HasForeignKey("UserId").OnDelete(DeleteBehavior.Cascade),
+                    j => j.HasOne<Subject>().WithMany().HasForeignKey("SubjectId").OnDelete(DeleteBehavior.Cascade),
+                    j =>
+                    {
+                        j.ToTable(DbTablePrefix + "SubjectTeachers", DbSchema);
+                        j.HasKey("SubjectId", "UserId");
+                    });
         });
     }
 }

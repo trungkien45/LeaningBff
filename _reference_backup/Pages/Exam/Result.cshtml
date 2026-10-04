@@ -1,0 +1,137 @@
+@page "{id:long}"
+@using LearningBff.Entities
+@model LearningBff.Pages.Exam.ResultModel
+@{
+    ViewData["Title"] = "Kết quả thi";
+    var passed = Model.Result?.IsPassed ?? false;
+}
+
+<div class="result-page">
+    @if (TempData["Error"] != null)
+    {
+        <div class="alert alert-danger" role="alert">@TempData["Error"]</div>
+    }
+
+    <div class="result-hero @(passed ? "passed" : "failed")">
+        <div class="result-icon">
+            <i class="fas @(passed ? "fa-trophy" : "fa-times-circle")"></i>
+        </div>
+        <h1>@(passed ? "Chúc mừng! Bạn đã đạt!" : "Chưa đạt. Cố gắng hơn nhé!")</h1>
+        <div class="result-score-big">
+            <span class="score-value">@Model.Result?.Score.ToString("F1")</span>
+            <span class="score-max">/ @Model.Result?.MaxScore</span>
+        </div>
+    </div>
+
+    <div class="result-summary-cards">
+        <div class="summary-card">
+            <i class="fas fa-file-alt"></i>
+            <div>
+                <label>Đề thi</label>
+                <strong>@Model.Result?.ExamTitle</strong>
+            </div>
+        </div>
+        <div class="summary-card">
+            <i class="fas fa-check-circle correct-color"></i>
+            <div>
+                <label>Câu đúng</label>
+                <strong>@Model.CorrectCount / @Model.TotalCount</strong>
+            </div>
+        </div>
+        <div class="summary-card">
+            <i class="fas fa-stopwatch"></i>
+            <div>
+                <label>Thời gian làm bài</label>
+                <strong>@(Model.Result?.Duration.HasValue == true
+                    ? $"{(int)Model.Result.Duration.Value.TotalMinutes}:{Model.Result.Duration.Value.Seconds:D2}"
+                    : "—")</strong>
+            </div>
+        </div>
+        <div class="summary-card">
+            <i class="fas fa-redo"></i>
+            <div>
+                <label>Lần thi</label>
+                <strong>Lần @Model.Result?.AttemptNumber</strong>
+            </div>
+        </div>
+    </div>
+
+    <!-- Answer review -->
+    <div class="result-review">
+        <h2><i class="fas fa-clipboard-list"></i> Chi tiết từng câu</h2>
+
+        @{int idx = 0;}
+        @foreach (var question in Model.Result?.Questions ?? Enumerable.Empty<LearningBff.Services.Dtos.ExamResultQuestionDto>())
+        {
+            idx++;
+            <div class="review-item @(question.IsCorrect ? "correct" : "incorrect")">
+                <div class="review-header">
+                    <span class="review-num">Câu @idx</span>
+                    @if (question.IsCorrect)
+                    {
+                        <span class="review-result correct-badge"><i class="fas fa-check"></i> Đúng (+@question.EarnedScore điểm)</span>
+                    }
+                    else
+                    {
+                        <span class="review-result incorrect-badge"><i class="fas fa-times"></i> Sai (0 điểm)</span>
+                    }
+                </div>
+                <p class="review-question">@question.QuestionTitle</p>
+
+                <div class="review-options" aria-label="Đáp án câu @idx">
+                    @for (var optionIndex = 0; optionIndex < question.Options.Count; optionIndex++)
+                    {
+                        var option = question.Options[optionIndex];
+                        var optionState = option.IsCorrectAnswer
+                            ? "correct-answer"
+                            : option.IsSelectedByStudent ? "selected-incorrect" : string.Empty;
+                        <div class="review-option @optionState">
+                            <span class="review-option-marker">@("ABCD"[optionIndex])</span>
+                            <span class="review-option-text">@option.Text</span>
+                            <span class="review-option-status">
+                                @if (option.IsSelectedByStudent)
+                                {
+                                    <span class="selected-label"><i class="fas fa-user-check"></i> Bạn chọn</span>
+                                }
+                                @if (option.IsCorrectAnswer)
+                                {
+                                    <span class="correct-label"><i class="fas fa-check-circle"></i> Đáp án đúng</span>
+                                }
+                            </span>
+                        </div>
+                        @if (!string.IsNullOrWhiteSpace(option.Explanation) && (option.IsSelectedByStudent || option.IsCorrectAnswer))
+                        {
+                            <p class="review-option-explanation"><i class="fas fa-info-circle"></i> @option.Explanation</p>
+                        }
+                    }
+                </div>
+
+                @if (!question.Options.Any(option => option.IsSelectedByStudent))
+                {
+                    <p class="review-unanswered"><i class="fas fa-minus-circle"></i> Bạn chưa chọn đáp án.</p>
+                }
+                @if (!string.IsNullOrEmpty(question.GeneralExplanation))
+                {
+                    <div class="review-explanation">
+                        <i class="fas fa-lightbulb"></i> @question.GeneralExplanation
+                    </div>
+                }
+            </div>
+        }
+    </div>
+
+    <div class="result-actions">
+        <a href="/Exam" class="btn-secondary"><i class="fas fa-list"></i> Danh sách đề thi</a>
+        @if (Model.CanRetake)
+        {
+            <form method="post" asp-page-handler="Retry">
+                <input type="hidden" name="id" value="@Model.Result?.Id" />
+                <button type="submit" class="btn-primary"><i class="fas fa-redo"></i> Thi lại</button>
+            </form>
+        }
+        else
+        {
+            <span class="text-muted">Đã hết lượt thi hoặc đề thi không còn mở.</span>
+        }
+    </div>
+</div>

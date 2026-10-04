@@ -3,6 +3,7 @@ using System;
 using LearningBff.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Volo.Abp.EntityFrameworkCore;
@@ -12,9 +13,11 @@ using Volo.Abp.EntityFrameworkCore;
 namespace LearningBff.Migrations
 {
     [DbContext(typeof(LearningBffDbContext))]
-    partial class LearningBffDbContextModelSnapshot : ModelSnapshot
+    [Migration("20261004045932_Update_Subject_Teacher_And_ExamResult")]
+    partial class Update_Subject_Teacher_And_ExamResult
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder

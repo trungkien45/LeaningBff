@@ -1,137 +1,213 @@
-@page "{id:long}"
-@using LearningBff.Entities
+@page
 @model LearningBff.Pages.Exam.ResultModel
 @{
-    ViewData["Title"] = "Kết quả thi";
-    var passed = Model.Result?.IsPassed ?? false;
+    ViewData["Title"] = "Kết quả thi: " + Model.ResultData.ExamTitle;
 }
 
-<div class="result-page">
-    @if (TempData["Error"] != null)
-    {
-        <div class="alert alert-danger" role="alert">@TempData["Error"]</div>
+<style>
+    .result-hero {
+        border-radius: 1.25rem;
+        padding: 3rem 2rem;
+        color: white;
+        margin-bottom: 2rem;
+        text-align: center;
+        box-shadow: 0 10px 25px -5px rgba(0,0,0,0.15);
+        position: relative;
+        overflow: hidden;
+    }
+    .result-hero.passed {
+        background: linear-gradient(135deg, #065f46 0%, #047857 50%, #10b981 100%);
+    }
+    .result-hero.failed {
+        background: linear-gradient(135deg, #991b1b 0%, #b91c1c 50%, #ef4444 100%);
+    }
+    .score-badge-large {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 150px;
+        height: 150px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(8px);
+        border: 4px solid rgba(255, 255, 255, 0.4);
+        margin: 1.5rem auto;
+        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+    .score-number {
+        font-size: 3rem;
+        font-weight: 800;
+        line-height: 1;
+    }
+    .score-max {
+        font-size: 1.1rem;
+        opacity: 0.85;
     }
 
-    <div class="result-hero @(passed ? "passed" : "failed")">
-        <div class="result-icon">
-            <i class="fas @(passed ? "fa-trophy" : "fa-times-circle")"></i>
+    .review-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        border: 1px solid #e2e8f0;
+        padding: 1.75rem;
+        margin-bottom: 1.5rem;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.02);
+    }
+    .review-card.correct {
+        border-left: 6px solid #10b981;
+    }
+    .review-card.incorrect {
+        border-left: 6px solid #ef4444;
+    }
+
+    .review-option {
+        padding: 0.75rem 1.25rem;
+        border-radius: 0.75rem;
+        border: 1.5px solid #e2e8f0;
+        margin-bottom: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        font-size: 0.95rem;
+    }
+    .review-option.correct-choice {
+        background: #f0fdf4;
+        border-color: #86efac;
+        color: #166534;
+        font-weight: 600;
+    }
+    .review-option.wrong-choice {
+        background: #fef2f2;
+        border-color: #fca5a5;
+        color: #991b1b;
+        text-decoration: line-through;
+    }
+</style>
+
+<div class="container py-4" style="max-width: 960px;">
+    @* SCORE BANNER *@
+    <div class="result-hero @(Model.ResultData.IsPassed ? "passed" : "failed")">
+        <span class="badge bg-white bg-opacity-20 px-3 py-1 rounded-pill mb-2">
+            <i class="fas fa-book me-1"></i> @Model.ResultData.SubjectName
+        </span>
+        <h1 class="h3 fw-bold mb-1">@Model.ResultData.ExamTitle</h1>
+        <p class="mb-0 opacity-75">Lần thi thứ @Model.ResultData.AttemptNumber · Nộp lúc @(Model.ResultData.SubmitTime?.ToLocalTime().ToString("dd/MM/yyyy HH:mm") ?? "—")</p>
+
+        <div class="score-badge-large">
+            <span class="score-number">@Model.ResultData.Score</span>
+            <span class="score-max">/ @Model.ResultData.MaxScore điểm</span>
         </div>
-        <h1>@(passed ? "Chúc mừng! Bạn đã đạt!" : "Chưa đạt. Cố gắng hơn nhé!")</h1>
-        <div class="result-score-big">
-            <span class="score-value">@Model.Result?.Score.ToString("F1")</span>
-            <span class="score-max">/ @Model.Result?.MaxScore</span>
+
+        <h2 class="h4 fw-bold mb-3">
+            @if (Model.ResultData.IsPassed)
+            {
+                <span><i class="fas fa-trophy me-2"></i> CHÚC MỪNG BẠN ĐÃ ĐẠT!</span>
+            }
+            else
+            {
+                <span><i class="fas fa-redo-alt me-2"></i> BẠN CHƯA ĐẠT ĐIỂM YÊU CẦU</span>
+            }
+        </h2>
+
+        <div class="d-inline-flex flex-wrap justify-content-center gap-3 bg-white bg-opacity-10 backdrop-blur rounded-pill px-4 py-2 mb-4">
+            <span><i class="fas fa-check-circle text-white me-1"></i> Đúng <strong>@Model.ResultData.CorrectQuestions</strong>/@Model.ResultData.TotalQuestions câu</span>
+            <span>•</span>
+            <span><i class="fas fa-clock text-white me-1"></i> Thời gian: <strong>@(Model.ResultData.Duration?.ToString(@"mm\:ss") ?? "—")</strong></span>
+        </div>
+
+        <div class="d-flex flex-wrap justify-content-center gap-2">
+            @if (Model.ResultData.CanRetake)
+            {
+                <form method="post" asp-page-handler="Retake">
+                    <input type="hidden" name="examId" value="@Model.ResultData.ExamId" />
+                    <button type="submit" class="btn btn-light fw-bold px-4 shadow-sm">
+                        <i class="fas fa-redo-alt me-1 text-primary"></i> Thi lại đề này
+                    </button>
+                </form>
+            }
+
+            <a href="/Learning?subjectId=@Model.ResultData.SubjectId" class="btn btn-outline-light fw-semibold px-4">
+                <i class="fas fa-book-reader me-1"></i> Tiếp tục học môn này
+            </a>
+
+            <a href="/Exam" class="btn btn-outline-light fw-semibold px-4">
+                <i class="fas fa-list me-1"></i> Danh sách đề thi
+            </a>
         </div>
     </div>
 
-    <div class="result-summary-cards">
-        <div class="summary-card">
-            <i class="fas fa-file-alt"></i>
-            <div>
-                <label>Đề thi</label>
-                <strong>@Model.Result?.ExamTitle</strong>
-            </div>
-        </div>
-        <div class="summary-card">
-            <i class="fas fa-check-circle correct-color"></i>
-            <div>
-                <label>Câu đúng</label>
-                <strong>@Model.CorrectCount / @Model.TotalCount</strong>
-            </div>
-        </div>
-        <div class="summary-card">
-            <i class="fas fa-stopwatch"></i>
-            <div>
-                <label>Thời gian làm bài</label>
-                <strong>@(Model.Result?.Duration.HasValue == true
-                    ? $"{(int)Model.Result.Duration.Value.TotalMinutes}:{Model.Result.Duration.Value.Seconds:D2}"
-                    : "—")</strong>
-            </div>
-        </div>
-        <div class="summary-card">
-            <i class="fas fa-redo"></i>
-            <div>
-                <label>Lần thi</label>
-                <strong>Lần @Model.Result?.AttemptNumber</strong>
-            </div>
-        </div>
+    @* DETAILED REVIEW *@
+    <div class="d-flex align-items-center justify-content-between mb-4">
+        <h2 class="h5 fw-bold mb-0"><i class="fas fa-list-check text-primary me-2"></i> Chi tiết bài làm & Đáp án</h2>
+        <span class="text-muted small">@Model.ResultData.Questions.Count câu hỏi</span>
     </div>
 
-    <!-- Answer review -->
-    <div class="result-review">
-        <h2><i class="fas fa-clipboard-list"></i> Chi tiết từng câu</h2>
+    @for (int i = 0; i < Model.ResultData.Questions.Count; i++)
+    {
+        var q = Model.ResultData.Questions[i];
+        var qNum = i + 1;
 
-        @{int idx = 0;}
-        @foreach (var question in Model.Result?.Questions ?? Enumerable.Empty<LearningBff.Services.Dtos.ExamResultQuestionDto>())
-        {
-            idx++;
-            <div class="review-item @(question.IsCorrect ? "correct" : "incorrect")">
-                <div class="review-header">
-                    <span class="review-num">Câu @idx</span>
-                    @if (question.IsCorrect)
+        <div class="review-card @(q.IsCorrect ? "correct" : "incorrect")">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <span class="badge bg-dark bg-opacity-75 fs-6 px-3 py-1">Câu @qNum</span>
+                <div>
+                    @if (q.IsCorrect)
                     {
-                        <span class="review-result correct-badge"><i class="fas fa-check"></i> Đúng (+@question.EarnedScore điểm)</span>
+                        <span class="badge bg-success px-3 py-1">✓ Đúng (+@q.EarnedScore điểm)</span>
                     }
                     else
                     {
-                        <span class="review-result incorrect-badge"><i class="fas fa-times"></i> Sai (0 điểm)</span>
+                        <span class="badge bg-danger px-3 py-1">✗ Sai (0 / @q.MaxScore điểm)</span>
                     }
                 </div>
-                <p class="review-question">@question.QuestionTitle</p>
+            </div>
 
-                <div class="review-options" aria-label="Đáp án câu @idx">
-                    @for (var optionIndex = 0; optionIndex < question.Options.Count; optionIndex++)
+            <h3 class="h6 fw-semibold mb-3 text-dark">@q.QuestionTitle</h3>
+
+            <div class="options-review">
+                @foreach (var opt in q.Options)
+                {
+                    var isSelected = opt.IsSelectedByStudent;
+                    var isCorrect = opt.IsCorrectAnswer;
+
+                    var optClass = "";
+                    if (isCorrect)
                     {
-                        var option = question.Options[optionIndex];
-                        var optionState = option.IsCorrectAnswer
-                            ? "correct-answer"
-                            : option.IsSelectedByStudent ? "selected-incorrect" : string.Empty;
-                        <div class="review-option @optionState">
-                            <span class="review-option-marker">@("ABCD"[optionIndex])</span>
-                            <span class="review-option-text">@option.Text</span>
-                            <span class="review-option-status">
-                                @if (option.IsSelectedByStudent)
-                                {
-                                    <span class="selected-label"><i class="fas fa-user-check"></i> Bạn chọn</span>
-                                }
-                                @if (option.IsCorrectAnswer)
-                                {
-                                    <span class="correct-label"><i class="fas fa-check-circle"></i> Đáp án đúng</span>
-                                }
-                            </span>
-                        </div>
-                        @if (!string.IsNullOrWhiteSpace(option.Explanation) && (option.IsSelectedByStudent || option.IsCorrectAnswer))
-                        {
-                            <p class="review-option-explanation"><i class="fas fa-info-circle"></i> @option.Explanation</p>
-                        }
+                        optClass = "correct-choice";
                     }
-                </div>
+                    else if (isSelected && !isCorrect)
+                    {
+                        optClass = "wrong-choice";
+                    }
 
-                @if (!question.Options.Any(option => option.IsSelectedByStudent))
-                {
-                    <p class="review-unanswered"><i class="fas fa-minus-circle"></i> Bạn chưa chọn đáp án.</p>
-                }
-                @if (!string.IsNullOrEmpty(question.GeneralExplanation))
-                {
-                    <div class="review-explanation">
-                        <i class="fas fa-lightbulb"></i> @question.GeneralExplanation
+                    <div class="review-option @optClass">
+                        <div>
+                            <span>@opt.Text</span>
+                        </div>
+                        <div class="small fw-bold">
+                            @if (isSelected && isCorrect)
+                            {
+                                <span class="text-success"><i class="fas fa-check-circle"></i> Bạn chọn đúng</span>
+                            }
+                            else if (isSelected && !isCorrect)
+                            {
+                                <span class="text-danger"><i class="fas fa-times-circle"></i> Bạn đã chọn</span>
+                            }
+                            else if (isCorrect)
+                            {
+                                <span class="text-success"><i class="fas fa-check"></i> Đáp án đúng</span>
+                            }
+                        </div>
                     </div>
                 }
             </div>
-        }
-    </div>
 
-    <div class="result-actions">
-        <a href="/Exam" class="btn-secondary"><i class="fas fa-list"></i> Danh sách đề thi</a>
-        @if (Model.CanRetake)
-        {
-            <form method="post" asp-page-handler="Retry">
-                <input type="hidden" name="id" value="@Model.Result?.Id" />
-                <button type="submit" class="btn-primary"><i class="fas fa-redo"></i> Thi lại</button>
-            </form>
-        }
-        else
-        {
-            <span class="text-muted">Đã hết lượt thi hoặc đề thi không còn mở.</span>
-        }
-    </div>
+            @if (!string.IsNullOrWhiteSpace(q.GeneralExplanation))
+            {
+                <div class="bg-light p-3 rounded-3 mt-3 small text-muted border">
+                    <strong class="text-dark"><i class="fas fa-lightbulb text-warning me-1"></i> Giải thích:</strong> @q.GeneralExplanation
+                </div>
+            }
+        </div>
+    }
 </div>

@@ -7,14 +7,12 @@ using LearningBff.Data;
 using LearningBff.Entities;
 using LearningBff.Services.Dtos;
 using Volo.Abp;
-using Volo.Abp.Application.Dtos;
 using Volo.Abp.Users;
 
 namespace LearningBff.Services;
 
 public class ExamAppService : LearningBffAppService
 {
-    private const double ScoreTolerance = 0.001;
     private readonly LearningBffDbContext _db;
     private readonly ICurrentUser _currentUser;
 
@@ -24,343 +22,441 @@ public class ExamAppService : LearningBffAppService
         _currentUser = currentUser;
     }
 
-    // ─── Admin: full list ────────────────────────────────────────────────────
-    public async Task<List<ExamSummaryDto>> GetListAsync(long? subjectId = null)
+    /// <summary>
+    /// Danh sách các đề thi đang mở cho học viên
+    /// </summary>
+    public async Task<List<ExamSummaryDto>> GetPublishedExamsAsync(long? subjectId = null)
     {
+        var userId = _currentUser.Id;
+        var now = DateTime.UtcNow;
+
         var query = _db.Exams.AsNoTracking()
+            .Where(e => e.IsPublished
+                && (e.StartTime == null || e.StartTime <= now)
+                && (e.EndTime == null || e.EndTime >= now))
             .Include(e => e.Subject)
+            .Include(e => e.Chapter)
             .Include(e => e.ExamQuestions)
-                .ThenInclude(eq => eq.Question)
             .AsQueryable();
 
         if (subjectId.HasValue)
+        {
             query = query.Where(e => e.SubjectId == subjectId.Value);
+        }
 
         var exams = await query
             .OrderByDescending(e => e.CreationTime)
             .ToListAsync();
-        return exams.Select(MapToSummary).ToList();
+
+        var attemptsDict = new Dictionary<long, int>();
+        if (userId.HasValue)
+        {
+            attemptsDict = await _db.ExamResults.AsNoTracking()
+                .Where(r => r.UserId == userId.Value && r.Status == ExamResultStatus.Submitted)
+                .GroupBy(r => r.ExamId)
+                .Select(g => new { ExamId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.ExamId, x => x.Count);
+        }
+
+        var result = new List<ExamSummaryDto>();
+        foreach (var e in exams)
+        {
+            var attemptsUsed = attemptsDict.GetValueOrDefault(e.Id, 0);
+            var canTake = !e.MaxAttempts.HasValue || attemptsUsed < e.MaxAttempts.Value;
+
+            result.Add(new ExamSummaryDto
+            {
+                Id = e.Id,
+                Title = e.Title,
+                Description = e.Description,
+                SubjectId = e.SubjectId,
+                SubjectName = e.Subject?.Name ?? string.Empty,
+                ChapterId = e.ChapterId,
+                ChapterName = e.Chapter?.Name,
+                DurationInMinutes = e.DurationInMinutes,
+                PassScore = e.PassScore,
+                MaxScore = e.MaxScore,
+                IsPublished = e.IsPublished,
+                ShuffleQuestions = e.ShuffleQuestions,
+                ShuffleAnswers = e.ShuffleAnswers,
+                StartTime = e.StartTime,
+                EndTime = e.EndTime,
+                MaxAttempts = e.MaxAttempts,
+                AttemptsUsed = attemptsUsed,
+                CanTake = canTake,
+                QuestionCount = e.ExamQuestions.Count
+            });
+        }
+
+        return result;
     }
 
-    public async Task<PagedResultDto<ExamSummaryDto>> GetListPageAsync(
-        long? subjectId, int skipCount, int maxResultCount)
-    {
-        var query = _db.Exams.AsNoTracking().AsQueryable();
-        if (subjectId.HasValue)
-            query = query.Where(exam => exam.SubjectId == subjectId.Value);
-
-        var totalCount = await query.CountAsync();
-        var exams = await query
-            .Include(exam => exam.Subject)
-            .Include(exam => exam.ExamQuestions)
-            .OrderByDescending(exam => exam.CreationTime)
-            .ThenByDescending(exam => exam.Id)
-            .Skip(Math.Max(0, skipCount))
-            .Take(Math.Clamp(maxResultCount, 1, 100))
-            .ToListAsync();
-
-        return new PagedResultDto<ExamSummaryDto>(totalCount, exams.Select(MapToSummary).ToList());
-    }
-
-    public async Task<PagedResultDto<ExamSummaryDto>> GetPublishedExamsPageAsync(
-        long? subjectId, int skipCount, int maxResultCount)
-    {
-        var userId = _currentUser.Id
-            ?? throw new UserFriendlyException("Bạn cần đăng nhập để xem đề thi.");
-        var query = GetPublishedExamsQuery(userId);
-
-        if (subjectId.HasValue)
-            query = query.Where(e => e.SubjectId == subjectId.Value);
-
-        var totalCount = await query.CountAsync();
-        var exams = await query
-            .Include(e => e.Subject)
-            .Include(e => e.ExamQuestions)
-            .OrderByDescending(e => e.CreationTime)
-            .ThenByDescending(e => e.Id)
-            .Skip(Math.Max(0, skipCount))
-            .Take(Math.Clamp(maxResultCount, 1, 100))
-            .ToListAsync();
-
-        return new PagedResultDto<ExamSummaryDto>(
-            totalCount,
-            exams.Select(MapToSummary).ToList());
-    }
-
+    /// <summary>
+    /// Danh sách môn học có đề thi để lọc
+    /// </summary>
     public async Task<List<SubjectFilterDto>> GetPublishedExamSubjectsAsync()
     {
-        var userId = _currentUser.Id
-            ?? throw new UserFriendlyException("Bạn cần đăng nhập để xem đề thi.");
-
         return await _db.Subjects.AsNoTracking()
-            .Where(subject => subject.IsActive
-                && _db.EnrollmentSubjects.Any(registration => registration.UserId == userId
-                    && registration.SubjectId == subject.Id
-                    && registration.IsActive))
-            .OrderBy(subject => subject.Name)
-            .Select(subject => new SubjectFilterDto
+            .Where(s => s.IsActive && s.Exams.Any(e => e.IsPublished))
+            .OrderBy(s => s.Name)
+            .Select(s => new SubjectFilterDto
             {
-                Id = subject.Id,
-                Name = subject.Name
+                Id = s.Id,
+                Name = s.Name
             })
             .ToListAsync();
     }
 
-    private IQueryable<Exam> GetPublishedExamsQuery(Guid userId)
+    /// <summary>
+    /// Lịch sử kết quả làm bài của học viên hiện tại
+    /// </summary>
+    public async Task<List<ExamResultDto>> GetMyExamHistoryAsync(long? subjectId = null)
     {
-        var now = DateTime.UtcNow;
-        return _db.Exams.AsNoTracking()
-            .Where(exam => exam.IsPublished
-                && (exam.StartTime == null || exam.StartTime <= now)
-                && (exam.EndTime == null || exam.EndTime >= now)
-                && _db.EnrollmentSubjects.Any(registration => registration.UserId == userId
-                    && registration.SubjectId == exam.SubjectId
-                    && registration.IsActive));
-    }
-
-    public async Task<ExamDto> GetAsync(long id)
-    {
-        var exam = await _db.Exams.AsNoTracking()
-            .Include(e => e.Subject)
-            .Include(e => e.ExamQuestions)
-                .ThenInclude(eq => eq.Question)
-                    .ThenInclude(q => q.Answers)
-            .FirstOrDefaultAsync(e => e.Id == id)
-            ?? throw new UserFriendlyException($"Không tìm thấy đề thi ID={id}");
-
-        return MapToDto(exam);
-    }
-
-    public async Task<ExamSummaryDto> CreateAsync(CreateExamDto input)
-    {
-        var subject = await _db.Subjects.FindAsync(input.SubjectId)
-            ?? throw new UserFriendlyException($"Không tìm thấy môn học ID={input.SubjectId}");
-
-        var exam = new Exam(input.Title, input.SubjectId, input.DurationInMinutes, input.PassScore, input.MaxScore)
+        var userId = _currentUser.Id;
+        if (!userId.HasValue)
         {
-            Description      = input.Description,
-            IsPublished      = input.IsPublished,
-            ShuffleQuestions = input.ShuffleQuestions,
-            ShuffleAnswers   = input.ShuffleAnswers,
-            StartTime        = input.StartTime,
-            EndTime          = input.EndTime,
-            MaxAttempts      = input.MaxAttempts
-        };
-
-        _db.Exams.Add(exam);
-        await SyncQuestionsAsync(exam, input.Questions);
-        await _db.SaveChangesAsync();
-
-        var saved = await _db.Exams.AsNoTracking()
-            .Include(e => e.Subject)
-            .Include(e => e.ExamQuestions)
-            .FirstAsync(e => e.Id == exam.Id);
-        return MapToSummary(saved);
-    }
-
-    public async Task<ExamSummaryDto> UpdateAsync(long id, UpdateExamDto input)
-    {
-        var exam = await _db.Exams.FindAsync(id)
-            ?? throw new UserFriendlyException($"Không tìm thấy đề thi ID={id}");
-        if (!await _db.Subjects.AnyAsync(s => s.Id == input.SubjectId))
-            throw new UserFriendlyException($"Không tìm thấy môn học ID={input.SubjectId}");
-
-        exam.Title           = input.Title;
-        exam.Description     = input.Description;
-        exam.SubjectId       = input.SubjectId;
-        exam.DurationInMinutes = input.DurationInMinutes;
-        exam.PassScore       = input.PassScore;
-        exam.MaxScore        = input.MaxScore;
-        exam.IsPublished     = input.IsPublished;
-        exam.ShuffleQuestions = input.ShuffleQuestions;
-        exam.ShuffleAnswers  = input.ShuffleAnswers;
-        exam.StartTime       = input.StartTime;
-        exam.EndTime         = input.EndTime;
-        exam.MaxAttempts     = input.MaxAttempts;
-
-        await SyncQuestionsAsync(exam, input.Questions);
-
-        await _db.SaveChangesAsync();
-
-        var saved = await _db.Exams.AsNoTracking()
-            .Include(e => e.Subject)
-            .Include(e => e.ExamQuestions)
-            .FirstAsync(e => e.Id == exam.Id);
-        return MapToSummary(saved);
-    }
-
-    public async Task DeleteAsync(long id)
-    {
-        var exam = await _db.Exams.FindAsync(id)
-            ?? throw new UserFriendlyException($"Không tìm thấy đề thi ID={id}");
-        _db.Exams.Remove(exam);
-        await _db.SaveChangesAsync();
-    }
-
-    // ─── Manage exam questions ───────────────────────────────────────────────
-    public async Task AddQuestionAsync(long examId, AddExamQuestionDto input)
-    {
-        var exam = await _db.Exams.Include(e => e.ExamQuestions)
-            .FirstOrDefaultAsync(e => e.Id == examId)
-            ?? throw new UserFriendlyException($"Không tìm thấy đề thi ID={examId}");
-
-        if (exam.ExamQuestions.Any(eq => eq.QuestionId == input.QuestionId))
-            throw new UserFriendlyException("Câu hỏi đã có trong đề thi này.");
-
-        var question = await _db.Questions.AsNoTracking().FirstOrDefaultAsync(q => q.Id == input.QuestionId)
-            ?? throw new UserFriendlyException("Không tìm thấy câu hỏi trong ngân hàng câu hỏi.");
-        if (question.SubjectId != exam.SubjectId)
-            throw new UserFriendlyException("Chỉ có thể thêm câu hỏi thuộc cùng môn học với đề thi.");
-
-        var updatedScores = exam.ExamQuestions.Select(eq => eq.Score).Append(input.Score).ToList();
-        var updatedMaxScore = (float)updatedScores.Sum(score => (double)score);
-        ValidateScoreTotal(updatedMaxScore, updatedScores);
-        exam.MaxScore = updatedMaxScore;
-
-        var maxOrder = exam.ExamQuestions.Any() ? exam.ExamQuestions.Max(q => q.Order) : 0;
-        exam.ExamQuestions.Add(new ExamQuestion(examId, input.QuestionId, input.Score, maxOrder + 1));
-        await _db.SaveChangesAsync();
-    }
-
-    public async Task RemoveQuestionAsync(long examId, long questionId)
-    {
-        var exam = await _db.Exams
-            .Include(x => x.ExamQuestions)
-            .FirstOrDefaultAsync(x => x.Id == examId)
-            ?? throw new UserFriendlyException($"Không tìm thấy đề thi ID={examId}");
-        var eq = exam.ExamQuestions.FirstOrDefault(x => x.QuestionId == questionId)
-            ?? throw new UserFriendlyException("Không tìm thấy câu hỏi trong đề thi.");
-
-        var remainingScores = exam.ExamQuestions
-            .Where(x => x.QuestionId != questionId)
-            .Select(x => x.Score)
-            .ToList();
-        var updatedMaxScore = (float)remainingScores.Sum(score => (double)score);
-        ValidateScoreTotal(updatedMaxScore, remainingScores);
-
-        _db.ExamQuestions.Remove(eq);
-        exam.MaxScore = updatedMaxScore;
-        await _db.SaveChangesAsync();
-    }
-
-    // ─── Helpers ─────────────────────────────────────────────────────────────
-    private static ExamSummaryDto MapToSummary(Exam e)
-    {
-        var dto = new ExamSummaryDto
-        {
-            Id              = e.Id,
-            Title           = e.Title,
-            Description     = e.Description,
-            SubjectId       = e.SubjectId,
-            SubjectName     = e.Subject?.Name ?? string.Empty,
-            DurationInMinutes = e.DurationInMinutes,
-            PassScore       = e.PassScore,
-            MaxScore        = e.MaxScore,
-            IsPublished     = e.IsPublished,
-            ShuffleQuestions = e.ShuffleQuestions,
-            ShuffleAnswers  = e.ShuffleAnswers,
-            StartTime       = e.StartTime,
-            EndTime         = e.EndTime,
-            MaxAttempts     = e.MaxAttempts,
-            QuestionCount   = e.ExamQuestions.Count
-        };
-        dto.ExamQuestions = e.ExamQuestions.OrderBy(eq => eq.Order).Select(eq => new ExamQuestionDto
-        {
-            Id = eq.Id,
-            QuestionId = eq.QuestionId,
-            QuestionTitle = eq.Question?.Title ?? string.Empty,
-            QuestionType = eq.Question?.Type ?? QuestionType.Single,
-            Score = eq.Score,
-            Order = eq.Order
-        }).ToList();
-        return dto;
-    }
-
-    private static ExamDto MapToDto(Exam e)
-    {
-        var dto = new ExamDto
-        {
-            Id              = e.Id,
-            Title           = e.Title,
-            Description     = e.Description,
-            SubjectId       = e.SubjectId,
-            SubjectName     = e.Subject?.Name ?? string.Empty,
-            DurationInMinutes = e.DurationInMinutes,
-            PassScore       = e.PassScore,
-            MaxScore        = e.MaxScore,
-            IsPublished     = e.IsPublished,
-            ShuffleQuestions = e.ShuffleQuestions,
-            ShuffleAnswers  = e.ShuffleAnswers,
-            StartTime       = e.StartTime,
-            EndTime         = e.EndTime,
-            MaxAttempts     = e.MaxAttempts,
-            QuestionCount   = e.ExamQuestions.Count
-        };
-
-        dto.ExamQuestions = e.ExamQuestions.OrderBy(eq => eq.Order).Select(eq => new ExamQuestionDto
-        {
-            Id            = eq.Id,
-            QuestionId    = eq.QuestionId,
-            QuestionTitle = eq.Question?.Title ?? string.Empty,
-            QuestionType  = eq.Question?.Type ?? QuestionType.Single,
-            Score         = eq.Score,
-            Order         = eq.Order,
-            Answers       = eq.Question?.Answers.OrderBy(a => a.Order).Select(a => new AnswerDto
-            {
-                Id        = a.Id,
-                Text      = a.Text,
-                IsCorrect = a.IsCorrect,
-                Order     = a.Order
-            }).ToList() ?? new()
-        }).ToList();
-
-        return dto;
-    }
-
-    private async Task SyncQuestionsAsync(Exam exam, List<AddExamQuestionDto>? questions)
-    {
-        questions ??= new();
-        var selected = questions
-            .Where(q => q.QuestionId > 0)
-            .GroupBy(q => q.QuestionId)
-            .Select(g => g.First())
-            .ToList();
-
-        ValidateScoreTotal(exam.MaxScore, selected.Select(q => q.Score).ToList());
-
-        var questionIds = selected.Select(q => q.QuestionId).ToList();
-        var selectedQuestionInfo = questionIds.Count == 0
-            ? new List<Question>()
-            : await _db.Questions.AsNoTracking().Where(q => questionIds.Contains(q.Id)).ToListAsync();
-        if (selectedQuestionInfo.Count != questionIds.Count)
-            throw new UserFriendlyException("Có câu hỏi không tồn tại trong ngân hàng câu hỏi.");
-        if (selectedQuestionInfo.Any(q => q.SubjectId != exam.SubjectId))
-            throw new UserFriendlyException("Tất cả câu hỏi trong đề thi phải thuộc môn học của đề.");
-
-        if (exam.Id != 0)
-            await _db.Entry(exam).Collection(e => e.ExamQuestions).LoadAsync();
-        _db.ExamQuestions.RemoveRange(exam.ExamQuestions);
-        exam.ExamQuestions.Clear();
-
-        for (var index = 0; index < selected.Count; index++)
-        {
-            var item = selected[index];
-            exam.ExamQuestions.Add(new ExamQuestion(exam.Id, item.QuestionId, item.Score, index + 1));
+            return new List<ExamResultDto>();
         }
+
+        var query = _db.ExamResults.AsNoTracking()
+            .Where(r => r.UserId == userId.Value && r.Status == ExamResultStatus.Submitted)
+            .Include(r => r.Exam)
+                .ThenInclude(e => e!.Subject)
+            .Include(r => r.ExamResultAnswers)
+            .AsQueryable();
+
+        if (subjectId.HasValue)
+        {
+            query = query.Where(r => r.Exam != null && r.Exam.SubjectId == subjectId.Value);
+        }
+
+        var list = await query
+            .OrderByDescending(r => r.SubmitTime ?? r.CreationTime)
+            .ToListAsync();
+
+        return list.Select(r => new ExamResultDto
+        {
+            Id = r.Id,
+            ExamId = r.ExamId,
+            ExamTitle = !string.IsNullOrEmpty(r.ExamTitle) ? r.ExamTitle : (r.Exam?.Title ?? "Bài thi"),
+            SubjectId = r.Exam?.SubjectId ?? 0,
+            SubjectName = r.Exam?.Subject?.Name ?? string.Empty,
+            UserId = r.UserId,
+            Score = r.Score,
+            MaxScore = r.MaxScore,
+            IsPassed = r.IsPassed,
+            StartTime = r.StartTime,
+            SubmitTime = r.SubmitTime,
+            Status = r.Status,
+            AttemptNumber = r.AttemptNumber,
+            TotalQuestions = r.ExamResultAnswers.Select(a => a.QuestionId).Distinct().Count(),
+            CorrectQuestions = r.ExamResultAnswers.Where(a => a.IsCorrect).Select(a => a.QuestionId).Distinct().Count()
+        }).ToList();
     }
 
-    private static void ValidateScoreTotal(float maxScore, List<float> questionScores)
+    /// <summary>
+    /// Bắt đầu làm bài thi: Khởi tạo ExamResult phiên thi mới
+    /// </summary>
+    public async Task<long> StartExamAsync(long examId)
     {
-        if (questionScores.Count == 0)
-            throw new UserFriendlyException("Đề thi phải có ít nhất một câu hỏi.");
+        var userId = _currentUser.Id
+            ?? throw new UserFriendlyException("Bạn cần đăng nhập để làm bài thi.");
 
-        if (!float.IsFinite(maxScore) || maxScore <= 0
-            || questionScores.Any(score => !float.IsFinite(score) || score < 0))
-            throw new UserFriendlyException("Tổng điểm đề thi và điểm câu hỏi phải là số hợp lệ, không âm.");
+        var exam = await _db.Exams.AsNoTracking()
+            .Include(e => e.ExamQuestions)
+            .FirstOrDefaultAsync(e => e.Id == examId)
+            ?? throw new UserFriendlyException("Không tìm thấy đề thi.");
 
-        var scoreTotal = questionScores.Sum(score => (double)score);
-        if (Math.Abs(scoreTotal - maxScore) > ScoreTolerance)
-            throw new UserFriendlyException(
-                $"Tổng điểm câu hỏi ({scoreTotal:0.###}) phải bằng tổng điểm đề thi ({maxScore:0.###}).");
+        if (!exam.IsPublished)
+            throw new UserFriendlyException("Đề thi chưa được phát hành.");
+
+        var now = DateTime.UtcNow;
+        if (exam.StartTime.HasValue && exam.StartTime > now)
+            throw new UserFriendlyException("Đề thi chưa bắt đầu.");
+        if (exam.EndTime.HasValue && exam.EndTime < now)
+            throw new UserFriendlyException("Đề thi đã kết thúc.");
+
+        if (exam.ExamQuestions.Count == 0)
+            throw new UserFriendlyException("Đề thi này chưa có câu hỏi nào.");
+
+        if (exam.MaxAttempts.HasValue)
+        {
+            var attempts = await _db.ExamResults.CountAsync(r =>
+                r.ExamId == examId && r.UserId == userId && r.Status == ExamResultStatus.Submitted);
+            if (attempts >= exam.MaxAttempts.Value)
+                throw new UserFriendlyException($"Bạn đã dùng hết {exam.MaxAttempts.Value} lượt thi cho đề thi này.");
+        }
+
+        // Hủy bất kỳ phiên thi dở dang trước đó của đề này
+        var inProgress = await _db.ExamResults
+            .Where(r => r.ExamId == examId && r.UserId == userId && r.Status == ExamResultStatus.InProgress)
+            .ToListAsync();
+        foreach (var p in inProgress)
+        {
+            p.Status = ExamResultStatus.Expired;
+        }
+
+        var attemptNumber = await _db.ExamResults
+            .CountAsync(r => r.ExamId == examId && r.UserId == userId) + 1;
+
+        var result = new ExamResult(examId, userId, attemptNumber)
+        {
+            ExamTitle = exam.Title,
+            MaxScore = exam.MaxScore,
+            Status = ExamResultStatus.InProgress,
+            StartTime = DateTime.UtcNow
+        };
+
+        _db.ExamResults.Add(result);
+        await _db.SaveChangesAsync();
+
+        return result.Id;
+    }
+
+    /// <summary>
+    /// Lấy dữ liệu đề thi để học sinh làm bài
+    /// </summary>
+    public async Task<ExamTakeDto> GetForTakeAsync(long examResultId)
+    {
+        var userId = _currentUser.Id
+            ?? throw new UserFriendlyException("Bạn cần đăng nhập để làm bài thi.");
+
+        var result = await _db.ExamResults.AsNoTracking()
+            .Include(r => r.Exam)
+                .ThenInclude(e => e!.Subject)
+            .Include(r => r.Exam)
+                .ThenInclude(e => e!.ExamQuestions)
+                    .ThenInclude(eq => eq.Question)
+                        .ThenInclude(q => q!.Answers)
+            .FirstOrDefaultAsync(r => r.Id == examResultId && r.UserId == userId)
+            ?? throw new UserFriendlyException("Không tìm thấy phiên làm bài.");
+
+        if (result.Status != ExamResultStatus.InProgress)
+            throw new UserFriendlyException("Phiên làm bài này đã hoàn thành hoặc đã hết hạn.");
+
+        var exam = result.Exam
+            ?? throw new UserFriendlyException("Không tìm thấy thông tin đề thi.");
+
+        var elapsedSeconds = (int)(DateTime.UtcNow - result.StartTime).TotalSeconds;
+        var totalAllowedSeconds = exam.DurationInMinutes * 60;
+        var remainingSeconds = Math.Max(0, totalAllowedSeconds - elapsedSeconds);
+
+        var questions = exam.ExamQuestions.OrderBy(eq => eq.Order).Select(eq =>
+        {
+            var q = eq.Question!;
+            var answers = q.Answers.OrderBy(a => a.Order).Select(a => new AnswerItemDto
+            {
+                Id = a.Id,
+                Text = a.Text
+            }).ToList();
+
+            if (exam.ShuffleAnswers)
+            {
+                var rng = new Random((int)result.Id + (int)q.Id);
+                answers = answers.OrderBy(_ => rng.Next()).ToList();
+            }
+
+            return new ExamTakeQuestionDto
+            {
+                QuestionId = q.Id,
+                Title = q.Title,
+                Type = q.Type,
+                Score = eq.Score,
+                Order = eq.Order,
+                Answers = answers
+            };
+        }).ToList();
+
+        if (exam.ShuffleQuestions)
+        {
+            var rng = new Random((int)result.Id);
+            questions = questions.OrderBy(_ => rng.Next()).ToList();
+        }
+
+        return new ExamTakeDto
+        {
+            ExamResultId = result.Id,
+            ExamId = exam.Id,
+            Title = exam.Title,
+            SubjectName = exam.Subject?.Name ?? string.Empty,
+            DurationInMinutes = exam.DurationInMinutes,
+            RemainingSeconds = remainingSeconds,
+            StartTime = result.StartTime,
+            Questions = questions
+        };
+    }
+
+    /// <summary>
+    /// Nộp bài thi và chấm điểm tự động
+    /// </summary>
+    public async Task<ExamResultDto> SubmitExamAsync(SubmitExamDto input)
+    {
+        var userId = _currentUser.Id
+            ?? throw new UserFriendlyException("Bạn cần đăng nhập để nộp bài.");
+
+        var result = await _db.ExamResults
+            .Include(r => r.Exam)
+                .ThenInclude(e => e!.ExamQuestions)
+                    .ThenInclude(eq => eq.Question)
+                        .ThenInclude(q => q!.Answers)
+            .FirstOrDefaultAsync(r => r.Id == input.ExamResultId && r.UserId == userId)
+            ?? throw new UserFriendlyException("Không tìm thấy phiên làm bài.");
+
+        if (result.Status != ExamResultStatus.InProgress)
+            throw new UserFriendlyException("Bài thi này đã được nộp hoặc đã hết hạn.");
+
+        var exam = result.Exam!;
+        float totalEarnedScore = 0;
+        var examResultAnswers = new List<ExamResultAnswer>();
+
+        foreach (var eq in exam.ExamQuestions)
+        {
+            var question = eq.Question!;
+            var studentAns = input.Answers.FirstOrDefault(a => a.QuestionId == question.Id);
+            var selectedIds = studentAns?.SelectedAnswerIds ?? new List<long>();
+
+            bool isCorrect = false;
+
+            if (question.Type == QuestionType.Single)
+            {
+                var correctId = question.Answers.FirstOrDefault(a => a.IsCorrect)?.Id;
+                isCorrect = correctId.HasValue && selectedIds.Count == 1 && selectedIds[0] == correctId.Value;
+            }
+            else // Multi
+            {
+                var correctIds = question.Answers.Where(a => a.IsCorrect).Select(a => a.Id).OrderBy(x => x).ToList();
+                isCorrect = selectedIds.OrderBy(x => x).SequenceEqual(correctIds);
+            }
+
+            float earnedScore = isCorrect ? eq.Score : 0f;
+            totalEarnedScore += earnedScore;
+
+            if (selectedIds.Any())
+            {
+                foreach (var answerId in selectedIds)
+                {
+                    examResultAnswers.Add(new ExamResultAnswer(result.Id, question.Id, answerId, isCorrect, earnedScore));
+                }
+            }
+        }
+
+        // Quy đổi sang thang điểm MaxScore của đề thi
+        var totalQuestionScore = exam.ExamQuestions.Sum(eq => eq.Score);
+        float normalizedScore = 0;
+        if (totalQuestionScore > 0)
+        {
+            normalizedScore = (float)Math.Round(totalEarnedScore / totalQuestionScore * exam.MaxScore, 2);
+        }
+
+        result.ExamTitle = exam.Title;
+        result.Score = normalizedScore;
+        result.MaxScore = exam.MaxScore;
+        result.IsPassed = normalizedScore >= exam.PassScore;
+        result.SubmitTime = DateTime.UtcNow;
+        result.Status = ExamResultStatus.Submitted;
+
+        _db.ExamResultAnswers.AddRange(examResultAnswers);
+        await _db.SaveChangesAsync();
+
+        return await GetResultAsync(result.Id);
+    }
+
+    /// <summary>
+    /// Xem chi tiết kết quả bài thi và review đáp án
+    /// </summary>
+    public async Task<ExamResultDto> GetResultAsync(long resultId)
+    {
+        var userId = _currentUser.Id
+            ?? throw new UserFriendlyException("Bạn cần đăng nhập để xem kết quả.");
+
+        var result = await _db.ExamResults.AsNoTracking()
+            .Include(r => r.Exam)
+                .ThenInclude(e => e!.Subject)
+            .Include(r => r.Exam)
+                .ThenInclude(e => e!.ExamQuestions)
+                    .ThenInclude(eq => eq.Question)
+                        .ThenInclude(q => q!.Answers)
+            .Include(r => r.ExamResultAnswers)
+            .FirstOrDefaultAsync(r => r.Id == resultId && r.UserId == userId)
+            ?? throw new UserFriendlyException("Không tìm thấy kết quả bài thi.");
+
+        var exam = result.Exam;
+
+        var selectedByQuestion = result.ExamResultAnswers
+            .GroupBy(ra => ra.QuestionId)
+            .ToDictionary(g => g.Key, g => g.Select(ra => ra.AnswerId).ToHashSet());
+
+        var isCorrectByQuestion = result.ExamResultAnswers
+            .GroupBy(ra => ra.QuestionId)
+            .ToDictionary(g => g.Key, g => g.First().IsCorrect);
+
+        var earnedByQuestion = result.ExamResultAnswers
+            .GroupBy(ra => ra.QuestionId)
+            .ToDictionary(g => g.Key, g => g.First().EarnedScore);
+
+        var questionsReview = new List<ExamResultQuestionDto>();
+        if (exam != null)
+        {
+            foreach (var eq in exam.ExamQuestions.OrderBy(q => q.Order))
+            {
+                var q = eq.Question!;
+                var studentSelected = selectedByQuestion.GetValueOrDefault(q.Id) ?? new HashSet<long>();
+
+                questionsReview.Add(new ExamResultQuestionDto
+                {
+                    QuestionId = q.Id,
+                    QuestionTitle = q.Title,
+                    QuestionType = q.Type,
+                    IsCorrect = isCorrectByQuestion.GetValueOrDefault(q.Id, false),
+                    EarnedScore = earnedByQuestion.GetValueOrDefault(q.Id, 0f),
+                    MaxScore = eq.Score,
+                    GeneralExplanation = q.GeneralExplanation,
+                    Options = q.Answers.OrderBy(a => a.Order).Select(a => new ExamResultOptionDto
+                    {
+                        AnswerId = a.Id,
+                        Text = a.Text,
+                        IsCorrectAnswer = a.IsCorrect,
+                        IsSelectedByStudent = studentSelected.Contains(a.Id),
+                        Explanation = a.Explanation
+                    }).ToList()
+                });
+            }
+        }
+
+        var canRetake = false;
+        if (exam != null && exam.IsPublished)
+        {
+            if (!exam.MaxAttempts.HasValue)
+            {
+                canRetake = true;
+            }
+            else
+            {
+                var usedAttempts = await _db.ExamResults.CountAsync(r =>
+                    r.ExamId == exam.Id && r.UserId == userId && r.Status == ExamResultStatus.Submitted);
+                canRetake = usedAttempts < exam.MaxAttempts.Value;
+            }
+        }
+
+        return new ExamResultDto
+        {
+            Id = result.Id,
+            ExamId = result.ExamId,
+            ExamTitle = !string.IsNullOrEmpty(result.ExamTitle) ? result.ExamTitle : (exam?.Title ?? "Bài thi"),
+            SubjectId = exam?.SubjectId ?? 0,
+            SubjectName = exam?.Subject?.Name ?? string.Empty,
+            UserId = result.UserId,
+            Score = result.Score,
+            MaxScore = result.MaxScore,
+            IsPassed = result.IsPassed,
+            StartTime = result.StartTime,
+            SubmitTime = result.SubmitTime,
+            Status = result.Status,
+            AttemptNumber = result.AttemptNumber,
+            CanRetake = canRetake,
+            TotalQuestions = questionsReview.Count,
+            CorrectQuestions = questionsReview.Count(q => q.IsCorrect),
+            Questions = questionsReview
+        };
     }
 }

@@ -1,0 +1,669 @@
+@page
+@model LearningBff.Pages.Teacher.IndexModel
+@inject Volo.Abp.Users.ICurrentUser CurrentUser
+@{
+    ViewData["Title"] = "Bảng điều khiển Giảng viên";
+}
+
+<style>
+    :root {
+        --teach-primary: #6366f1;
+        --teach-primary-dark: #4338ca;
+        --teach-accent: #0ea5e9;
+        --teach-bg: #f8fafc;
+        --teach-card-bg: #ffffff;
+        --teach-border: #e2e8f0;
+        --teach-text: #0f172a;
+        --teach-muted: #64748b;
+        --teach-success: #10b981;
+        --teach-warning: #f59e0b;
+        --teach-danger: #ef4444;
+    }
+
+    .teacher-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem 1rem;
+    }
+
+    /* Hero Banner */
+    .teacher-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+        border-radius: 1.25rem;
+        padding: 2.25rem 2rem;
+        color: #ffffff;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 25px -5px rgba(30, 27, 75, 0.3);
+    }
+    .teacher-hero::after {
+        content: '';
+        position: absolute;
+        top: -40%;
+        right: -10%;
+        width: 420px;
+        height: 420px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0) 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .teacher-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(99, 102, 241, 0.25);
+        border: 1px solid rgba(165, 180, 252, 0.3);
+        color: #c7d2fe;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        margin-bottom: 0.85rem;
+        backdrop-filter: blur(4px);
+    }
+    .teacher-hero-title {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-bottom: 0.5rem;
+    }
+    .teacher-hero-subtitle {
+        color: #cbd5e1;
+        font-size: 1rem;
+        max-width: 700px;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    .hero-quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .btn-hero-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.15rem;
+        border-radius: 0.65rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    .btn-hero-primary {
+        background: #6366f1;
+        color: #ffffff;
+        border: none;
+    }
+    .btn-hero-primary:hover {
+        background: #4f46e5;
+        color: #ffffff;
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.4);
+    }
+    .btn-hero-glass {
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(6px);
+    }
+    .btn-hero-glass:hover {
+        background: rgba(255, 255, 255, 0.22);
+        color: #ffffff;
+        transform: translateY(-2px);
+    }
+
+    /* Stat Cards */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: var(--teach-card-bg);
+        border: 1px solid var(--teach-border);
+        border-radius: 1rem;
+        padding: 1.35rem 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1.15rem;
+        transition: all 0.2s ease;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.02);
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 16px -4px rgba(0, 0, 0, 0.08);
+        border-color: #cbd5e1;
+    }
+    .stat-icon-wrapper {
+        width: 52px;
+        height: 52px;
+        border-radius: 0.85rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+    .stat-icon-indigo { background: #e0e7ff; color: #4f46e5; }
+    .stat-icon-sky { background: #e0f2fe; color: #0284c7; }
+    .stat-icon-purple { background: #f3e8ff; color: #9333ea; }
+    .stat-icon-amber { background: #fef3c7; color: #d97706; }
+    .stat-icon-emerald { background: #d1fae5; color: #059669; }
+    .stat-icon-rose { background: #ffe4e6; color: #e11d48; }
+
+    .stat-info {
+        display: flex;
+        flex-direction: column;
+    }
+    .stat-value {
+        font-size: 1.65rem;
+        font-weight: 800;
+        color: var(--teach-text);
+        line-height: 1.1;
+    }
+    .stat-label {
+        font-size: 0.825rem;
+        color: var(--teach-muted);
+        font-weight: 500;
+        margin-top: 0.2rem;
+    }
+
+    /* Content Layout */
+    .dashboard-layout {
+        display: grid;
+        grid-template-columns: 1fr 340px;
+        gap: 1.75rem;
+    }
+
+    @@media (max-width: 1024px) {
+        .dashboard-layout {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Panels */
+    .dash-panel {
+        background: var(--teach-card-bg);
+        border: 1px solid var(--teach-border);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-bottom: 1.75rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.03);
+    }
+    .dash-panel-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1.25rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid #f1f5f9;
+    }
+    .dash-panel-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--teach-text);
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        margin: 0;
+    }
+
+    /* Table styling */
+    .custom-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .custom-table th {
+        font-size: 0.785rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.04em;
+        color: var(--teach-muted);
+        padding: 0.65rem 0.85rem;
+        border-bottom: 2px solid #e2e8f0;
+        text-align: left;
+    }
+    .custom-table td {
+        padding: 0.85rem 0.85rem;
+        font-size: 0.885rem;
+        color: var(--teach-text);
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+    }
+    .custom-table tr:hover td {
+        background: #f8fafc;
+    }
+
+    /* Progress bar */
+    .pass-progress {
+        height: 7px;
+        background: #f1f5f9;
+        border-radius: 9999px;
+        overflow: hidden;
+        margin-top: 0.35rem;
+        min-width: 80px;
+    }
+    .pass-progress-bar {
+        height: 100%;
+        border-radius: 9999px;
+        transition: width 0.4s ease;
+    }
+
+    /* Badges */
+    .badge-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.6rem;
+        border-radius: 9999px;
+    }
+    .badge-passed {
+        background: #dcfce7;
+        color: #15803d;
+    }
+    .badge-failed {
+        background: #fee2e2;
+        color: #b91c1c;
+    }
+
+    /* Quick links box */
+    .quick-link-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0.85rem 1rem;
+        border-radius: 0.75rem;
+        border: 1px solid var(--teach-border);
+        color: var(--teach-text);
+        text-decoration: none;
+        margin-bottom: 0.75rem;
+        transition: all 0.2s ease;
+        background: #fafafa;
+    }
+    .quick-link-item:hover {
+        background: #ffffff;
+        border-color: var(--teach-primary);
+        color: var(--teach-primary);
+        transform: translateX(4px);
+        box-shadow: 0 3px 8px rgba(99, 102, 241, 0.12);
+    }
+    .quick-link-content {
+        display: flex;
+        align-items: center;
+        gap: 0.85rem;
+    }
+    .quick-link-icon {
+        width: 36px;
+        height: 36px;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1rem;
+    }
+
+    /* Teacher tip banner */
+    .teacher-tip {
+        background: linear-gradient(135deg, #eff6ff 0%, #e0e7ff 100%);
+        border: 1px solid #bfdbfe;
+        border-radius: 0.85rem;
+        padding: 1.15rem;
+        color: #1e3a8a;
+    }
+    .teacher-tip-title {
+        font-size: 0.9rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 0.45rem;
+        margin-bottom: 0.4rem;
+    }
+    .teacher-tip-body {
+        font-size: 0.825rem;
+        line-height: 1.5;
+        color: #1e40af;
+        margin: 0;
+    }
+</style>
+
+<div class="teacher-container">
+    <!-- Hero Banner -->
+    <div class="teacher-hero">
+        <div class="teacher-hero-badge">
+            <i class="fas fa-graduation-cap"></i>
+            <span>Không gian Quản trị & Giảng dạy</span>
+        </div>
+        <h1 class="teacher-hero-title">Xin chào, @CurrentUser.Name! 👋</h1>
+        <p class="teacher-hero-subtitle">
+            Theo dõi tiến độ học tập, quản lý ngân hàng câu hỏi, phát hành đề thi và kiểm soát chất lượng đào tạo trực tuyến của các môn học bạn phụ trách.
+        </p>
+
+        <div class="hero-quick-actions">
+            <a href="~/Teacher/Exams" class="btn-hero-action btn-hero-primary">
+                <i class="fas fa-plus-circle"></i>
+                <span>Tạo & Quản lý đề thi</span>
+            </a>
+            <a href="~/Teacher/Questions" class="btn-hero-action btn-hero-glass">
+                <i class="fas fa-question-circle"></i>
+                <span>Ngân hàng câu hỏi</span>
+            </a>
+            <a href="~/Teacher/Subjects" class="btn-hero-action btn-hero-glass">
+                <i class="fas fa-book"></i>
+                <span>Quản lý môn học</span>
+            </a>
+            <a href="~/Learning" class="btn-hero-action btn-hero-glass">
+                <i class="fas fa-chalkboard-teacher"></i>
+                <span>Xem giao diện học viên</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Stat Metric Grid -->
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-icon-wrapper stat-icon-indigo">
+                <i class="fas fa-book-reader"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">@Model.DashboardData.TotalSubjects</div>
+                <div class="stat-label">Môn học phụ trách</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon-wrapper stat-icon-sky">
+                <i class="fas fa-user-graduate"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">@Model.DashboardData.TotalStudents</div>
+                <div class="stat-label">Học viên tham gia</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon-wrapper stat-icon-purple">
+                <i class="fas fa-file-signature"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">@Model.DashboardData.TotalExams</div>
+                <div class="stat-label">Đề thi đã tạo</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon-wrapper stat-icon-amber">
+                <i class="fas fa-database"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">@Model.DashboardData.TotalQuestions</div>
+                <div class="stat-label">Ngân hàng câu hỏi</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon-wrapper stat-icon-emerald">
+                <i class="fas fa-clipboard-check"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">@Model.DashboardData.TotalSubmittedExams</div>
+                <div class="stat-label">Lượt làm bài đã nộp</div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon-wrapper stat-icon-rose">
+                <i class="fas fa-chart-line"></i>
+            </div>
+            <div class="stat-info">
+                <div class="stat-value">@Model.DashboardData.PassRate%</div>
+                <div class="stat-label">Tỷ lệ đạt chung</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Layout: Content & Sidebar -->
+    <div class="dashboard-layout">
+        <!-- Main Column -->
+        <div class="dashboard-main">
+            <!-- Môn học đang giảng dạy -->
+            <div class="dash-panel">
+                <div class="dash-panel-header">
+                    <h2 class="dash-panel-title">
+                        <i class="fas fa-layer-group text-primary"></i>
+                        <span>Thống kê theo môn học</span>
+                    </h2>
+                    <a href="~/Teacher/Subjects" class="btn btn-sm btn-outline-secondary">
+                        Chi tiết <i class="fas fa-arrow-right ms-1"></i>
+                    </a>
+                </div>
+
+                @if (!Model.DashboardData.SubjectStats.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-folder-open fa-3x mb-2 text-secondary" style="opacity: 0.4;"></i>
+                        <p class="mb-0">Chưa có dữ liệu môn học hoặc bạn chưa được gán môn học nào.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Môn học</th>
+                                    <th class="text-center">Học viên</th>
+                                    <th class="text-center">Số đề thi</th>
+                                    <th class="text-center">Lượt nộp</th>
+                                    <th class="text-center">Điểm TB</th>
+                                    <th>Tỷ lệ đạt</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var s in Model.DashboardData.SubjectStats)
+                                {
+                                    <tr>
+                                        <td>
+                                            <div class="fw-bold text-dark">@s.SubjectName</div>
+                                        </td>
+                                        <td class="text-center">
+                                            <span class="badge bg-light text-dark border">@s.StudentCount</span>
+                                        </td>
+                                        <td class="text-center">@s.ExamCount</td>
+                                        <td class="text-center">@s.SubmissionCount</td>
+                                        <td class="text-center fw-bold text-primary">
+                                            @(s.SubmissionCount > 0 ? s.AvgScore.ToString("0.0") : "—")
+                                        </td>
+                                        <td style="min-width: 140px;">
+                                            <div class="d-flex align-items-center justify-content-between">
+                                                <span class="small fw-semibold">@s.PassRate%</span>
+                                                <span class="text-muted small">(@s.PassedCount/@s.SubmissionCount)</span>
+                                            </div>
+                                            <div class="pass-progress">
+                                                <div class="pass-progress-bar @(s.PassRate >= 70 ? "bg-success" : (s.PassRate >= 50 ? "bg-warning" : "bg-danger"))" 
+                                                     style="width: @(s.PassRate)%"></div>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+
+            <!-- Bài nộp gần đây -->
+            <div class="dash-panel">
+                <div class="dash-panel-header">
+                    <h2 class="dash-panel-title">
+                        <i class="fas fa-history text-info"></i>
+                        <span>Bài thi vừa nộp gần đây</span>
+                    </h2>
+                    <span class="badge bg-light text-secondary border">10 bài mới nhất</span>
+                </div>
+
+                @if (!Model.DashboardData.RecentSubmissions.Any())
+                {
+                    <div class="text-center py-4 text-muted">
+                        <i class="fas fa-file-alt fa-3x mb-2 text-secondary" style="opacity: 0.4;"></i>
+                        <p class="mb-0">Chưa có bài thi nào được nộp gần đây.</p>
+                    </div>
+                }
+                else
+                {
+                    <div class="table-responsive">
+                        <table class="custom-table">
+                            <thead>
+                                <tr>
+                                    <th>Học viên</th>
+                                    <th>Đề thi</th>
+                                    <th>Môn học</th>
+                                    <th class="text-center">Điểm số</th>
+                                    <th class="text-center">Kết quả</th>
+                                    <th>Thời gian nộp</th>
+                                    <th class="text-center">Thao tác</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var sub in Model.DashboardData.RecentSubmissions)
+                                {
+                                    <tr>
+                                        <td class="fw-semibold">
+                                            <i class="fas fa-user-circle text-muted me-1"></i>
+                                            @sub.StudentName
+                                        </td>
+                                        <td>@sub.ExamTitle</td>
+                                        <td class="text-muted small">@sub.SubjectName</td>
+                                        <td class="text-center fw-bold @(sub.IsPassed ? "text-success" : "text-danger")">
+                                            @sub.Score.ToString("0.0") / @sub.MaxScore.ToString("0.0")
+                                        </td>
+                                        <td class="text-center">
+                                            @if (sub.IsPassed)
+                                            {
+                                                <span class="badge-status badge-passed">
+                                                    <i class="fas fa-check-circle"></i> Đạt
+                                                </span>
+                                            }
+                                            else
+                                            {
+                                                <span class="badge-status badge-failed">
+                                                    <i class="fas fa-times-circle"></i> Chưa đạt
+                                                </span>
+                                            }
+                                        </td>
+                                        <td class="text-muted small">
+                                            @sub.SubmitTime.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                        </td>
+                                        <td class="text-center">
+                                            <a href="~/Exam/Result?id=@sub.ResultId" class="btn btn-sm btn-light border" title="Xem chi tiết bài làm">
+                                                <i class="fas fa-eye text-primary"></i>
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <!-- Sidebar Column -->
+        <div class="dashboard-sidebar">
+            <!-- Phím tắt nhanh -->
+            <div class="dash-panel">
+                <div class="dash-panel-header">
+                    <h3 class="dash-panel-title">
+                        <i class="fas fa-bolt text-warning"></i>
+                        <span>Thao tác nhanh</span>
+                    </h3>
+                </div>
+
+                <a href="~/Teacher/Exams" class="quick-link-item">
+                    <div class="quick-link-content">
+                        <div class="quick-link-icon" style="background: #e0e7ff; color: #4338ca;">
+                            <i class="fas fa-file-circle-plus"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Quản lý Đề thi</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Soạn đề, cài đặt thời gian</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted small"></i>
+                </a>
+
+                <a href="~/Teacher/Questions" class="quick-link-item">
+                    <div class="quick-link-content">
+                        <div class="quick-link-icon" style="background: #e0f2fe; color: #0284c7;">
+                            <i class="fas fa-database"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Ngân hàng câu hỏi</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Soạn trắc nghiệm, đáp án</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted small"></i>
+                </a>
+
+                <a href="~/Teacher/Subjects" class="quick-link-item">
+                    <div class="quick-link-content">
+                        <div class="quick-link-icon" style="background: #fef3c7; color: #b45309;">
+                            <i class="fas fa-book"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Môn học & Giáo trình</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Chương, bài giảng, tài liệu</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted small"></i>
+                </a>
+
+                <a href="~/Subjects" class="quick-link-item">
+                    <div class="quick-link-content">
+                        <div class="quick-link-icon" style="background: #dcfce7; color: #15803d;">
+                            <i class="fas fa-id-card"></i>
+                        </div>
+                        <div>
+                            <div class="fw-bold small">Đăng ký môn học</div>
+                            <div class="text-muted" style="font-size: 0.75rem;">Xem danh sách môn mở</div>
+                        </div>
+                    </div>
+                    <i class="fas fa-chevron-right text-muted small"></i>
+                </a>
+            </div>
+
+            <!-- Gợi ý dành cho giảng viên -->
+            <div class="teacher-tip mb-3">
+                <div class="teacher-tip-title">
+                    <i class="fas fa-lightbulb"></i>
+                    <span>Mẹo giảng dạy số</span>
+                </div>
+                <p class="teacher-tip-body">
+                    Bạn có thể cập nhật câu hỏi và bài học bất kỳ lúc nào. Học viên sẽ nhận được cập nhật tức thời khi vào lớp học trực tuyến.
+                </p>
+            </div>
+
+            <!-- Trạng thái hệ thống -->
+            <div class="dash-panel">
+                <div class="dash-panel-header">
+                    <h3 class="dash-panel-title">
+                        <i class="fas fa-shield-alt text-success"></i>
+                        <span>Vai trò của bạn</span>
+                    </h3>
+                </div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge bg-primary">Giảng viên / Quản trị</span>
+                    <span class="badge bg-success">Đang hoạt động</span>
+                </div>
+                <div class="text-muted small">
+                    <p class="mb-1"><i class="fas fa-user me-1"></i> Tài khoản: <strong>@CurrentUser.UserName</strong></p>
+                    <p class="mb-0"><i class="fas fa-envelope me-1"></i> Email: <strong>@CurrentUser.Email</strong></p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

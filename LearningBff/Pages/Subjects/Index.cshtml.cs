@@ -1,51 +1,79 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.AspNetCore.Mvc.RazorPages;
+using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
+using Volo.Abp.Users;
 using LearningBff.Services;
 using LearningBff.Services.Dtos;
 
 namespace LearningBff.Pages.Subjects;
 
-[Authorize]
-public class IndexModel : PageModel
+public class IndexModel : AbpPageModel
 {
-    private readonly EnrollmentSubjectAppService _registrationService;
+    private readonly LearningAppService _learningAppService;
+    private readonly ICurrentUser _currentUser;
 
-    public List<EnrollmentSubjectDto> Subjects { get; set; } = new();
-
-    public IndexModel(EnrollmentSubjectAppService registrationService)
+    public IndexModel(LearningAppService learningAppService, ICurrentUser currentUser)
     {
-        _registrationService = registrationService;
+        _learningAppService = learningAppService;
+        _currentUser = currentUser;
     }
 
-    public async Task OnGetAsync()
+    public List<SubjectCardDto> Subjects { get; set; } = new();
+    public string? Search { get; set; }
+    public bool IsAuthenticated => _currentUser.IsAuthenticated;
+
+    public async Task<IActionResult> OnGetAsync(string? search = null)
     {
-        Subjects = await _registrationService.GetSubjectsAsync();
+        Search = search;
+        var all = await _learningAppService.GetAllCoursesAsync();
+
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            var term = search.Trim().ToLower();
+            Subjects = all.Where(s => s.Name.ToLower().Contains(term)
+                || (s.Description != null && s.Description.ToLower().Contains(term))).ToList();
+        }
+        else
+        {
+            Subjects = all;
+        }
+
+        return Page();
     }
 
     public async Task<IActionResult> OnPostRegisterAsync(long subjectId)
     {
+        if (!IsAuthenticated)
+        {
+            return Redirect("/Account/Login");
+        }
+
         try
         {
-            await _registrationService.RegisterAsync(subjectId);
-            TempData["Success"] = "Đăng ký môn học thành công.";
+            await _learningAppService.RegisterSubjectAsync(subjectId);
+            TempData["Success"] = "Đăng ký môn học thành công! Bạn có thể bắt đầu học ngay bây giờ.";
         }
         catch (Exception ex)
         {
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToPage();
+        return RedirectToPage("./Index");
     }
 
     public async Task<IActionResult> OnPostUnregisterAsync(long subjectId)
     {
+        if (!IsAuthenticated)
+        {
+            return Redirect("/Account/Login");
+        }
+
         try
         {
-            await _registrationService.UnregisterAsync(subjectId);
+            await _learningAppService.UnregisterSubjectAsync(subjectId);
             TempData["Success"] = "Đã hủy đăng ký môn học.";
         }
         catch (Exception ex)
@@ -53,6 +81,6 @@ public class IndexModel : PageModel
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToPage();
+        return RedirectToPage("./Index");
     }
 }
