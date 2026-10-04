@@ -207,6 +207,14 @@
         from { opacity: 0; transform: scale(0.95) translateY(10px); }
         to { opacity: 1; transform: scale(1) translateY(0); }
     }
+    .custom-modal-card.shake {
+        animation: customModalShake 0.22s ease-in-out;
+    }
+    @@keyframes customModalShake {
+        0%, 100% { transform: scale(1); }
+        30% { transform: scale(1.02); }
+        70% { transform: scale(0.99); }
+    }
     .custom-modal-header {
         padding: 1.25rem 1.5rem;
         border-bottom: 1px solid #e2e8f0;
@@ -774,13 +782,18 @@
         openModal('deleteSubjectModal');
     }
 
-    // Đóng modal khi click ra vùng xám overlay bên ngoài
+    // Static backdrop: Bấm ra ngoài vùng modal KHÔNG tắt modal (chỉ đóng khi nhấn close (&times;), Hủy/Cancel, hoặc Lưu/Ok)
     document.addEventListener('DOMContentLoaded', function () {
         document.querySelectorAll('.custom-modal-overlay').forEach(function (overlay) {
             overlay.addEventListener('click', function (e) {
                 if (e.target === overlay) {
-                    overlay.classList.remove('active');
-                    document.body.style.overflow = '';
+                    // Không đóng modal, chỉ tạo hiệu ứng rung nhẹ (pulse/shake) báo hiệu modal dạng static
+                    var card = overlay.querySelector('.custom-modal-card');
+                    if (card) {
+                        card.classList.remove('shake');
+                        void card.offsetWidth; // trigger reflow để chạy lại animation
+                        card.classList.add('shake');
+                    }
                 }
             });
         });
