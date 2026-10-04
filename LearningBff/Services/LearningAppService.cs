@@ -399,11 +399,27 @@ public class LearningAppService : LearningBffAppService
         var enrollment = await _db.EnrollmentSubjects
             .FirstOrDefaultAsync(e => e.UserId == userId && e.SubjectId == subjectId && e.IsActive);
 
-        if (enrollment != null)
+        if (enrollment == null)
         {
-            enrollment.IsActive = false;
-            enrollment.UnregisteredAt = DateTime.UtcNow;
-            await _db.SaveChangesAsync();
+            throw new UserFriendlyException("Không tìm thấy thông tin đăng ký môn học này.");
         }
+
+        // Kiểm tra backend: Không cho phép hủy nếu học viên đã hoàn thành bất kỳ bài học nào trong môn này
+        var lessonIds = await _db.Lessons
+            .Where(l => l.Chapter.SubjectId == subjectId)
+            .Select(l => l.Id)
+            .ToListAsync();
+
+        var hasCompleted = await _db.LearningProgesses
+            .AnyAsync(lp => lp.UserId == userId && lp.IsCompleted && lessonIds.Contains(lp.LessonId));
+
+        if (hasCompleted)
+        {
+            throw new UserFriendlyException("Không thể hủy đăng ký vì bạn đã hoàn thành ít nhất một bài học trong môn này.");
+        }
+
+        enrollment.IsActive = false;
+        enrollment.UnregisteredAt = DateTime.UtcNow;
+        await _db.SaveChangesAsync();
     }
 }
