@@ -7,9 +7,11 @@ using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
 using Volo.Abp.Users;
 using LearningBff.Services;
 using LearningBff.Dtos;
+using Microsoft.AspNetCore.Authorization;
 
 namespace LearningBff.Pages.Subjects;
 
+[Authorize]
 public class IndexModel : AbpPageModel
 {
     private readonly LearningAppService _learningAppService;

@@ -148,7 +148,7 @@ public class LearningBffDbMigrationService : ITransientDependency
         return Path.Combine(slnDirectoryPath, "LearningBff");
     }
 
-    private string GetSolutionDirectoryPath()
+    private string? GetSolutionDirectoryPath()
     {
         var currentDirectory = new DirectoryInfo(Directory.GetCurrentDirectory());
 
@@ -156,7 +156,7 @@ public class LearningBffDbMigrationService : ITransientDependency
         {
             currentDirectory = Directory.GetParent(currentDirectory.FullName);
 
-            if (Directory.GetFiles(currentDirectory.FullName).FirstOrDefault(f => f.EndsWith(".sln") || f.EndsWith(".slnx")) != null)
+            if (Directory.GetFiles(currentDirectory!.FullName).FirstOrDefault(f => f.EndsWith(".sln") || f.EndsWith(".slnx")) != null)
             {
                 return currentDirectory.FullName;
             }

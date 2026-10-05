@@ -21,3 +21,17 @@ public enum ExamResultStatus
     Cancelled  = 4,
     Expired    = 5
 }
+
+public enum CourseFilter
+{
+    All,
+    Completed,
+    Incomplete
+}
+
+public enum CourseEnrollmentFilter
+{
+    All,
+    Enrolled,
+    NotEnrolled
+}

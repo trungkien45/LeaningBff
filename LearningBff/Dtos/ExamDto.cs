@@ -12,21 +12,21 @@ public class SubjectFilterDto
 }
 public class ExamDetailDto
 {
-    public long Id { get; internal set; }
-    public string Title { get; internal set; }
-    public string? Description { get; internal set; }
-    public long SubjectId { get; internal set; }
-    public DateTime CreationTime { get; internal set; }
-    public int DurationInMinutes { get; internal set; }
-    public float PassScore { get; internal set; }
-    public float MaxScore { get; internal set; }
-    public bool IsPublished { get; internal set; }
-    public bool ShuffleQuestions { get; internal set; }
-    public bool ShuffleAnswers { get; internal set; }
-    public DateTime? StartTime { get; internal set; }
-    public DateTime? EndTime { get; internal set; }
-    public int? MaxAttempts { get; internal set; }
-    public List<QuestionDto> Questions { get; internal set; }
+    public long Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public long SubjectId { get; set; }
+    public DateTime CreationTime { get; set; }
+    public int DurationInMinutes { get; set; }
+    public float PassScore { get; set; }
+    public float MaxScore { get; set; }
+    public bool IsPublished { get; set; }
+    public bool ShuffleQuestions { get; set; }
+    public bool ShuffleAnswers { get; set; }
+    public DateTime? StartTime { get; set; }
+    public DateTime? EndTime { get; set; }
+    public int? MaxAttempts { get; set; }
+    public List<QuestionDto> Questions { get; set; } = new();
 }
 public class ExamSummaryDto
 {
@@ -119,8 +119,8 @@ public class ExamResultDto
     public int TotalQuestions { get; set; }
     public int CorrectQuestions { get; set; }
     public List<ExamResultQuestionDto> Questions { get; set; } = new();
-    public string UserName { get; internal set; }
-    public string UserFullName { get; internal set; }
+    public string UserName { get; set; } = string.Empty;
+    public string UserFullName { get; set; } = string.Empty;
 }
 
 public class ExamResultQuestionDto

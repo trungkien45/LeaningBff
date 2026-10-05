@@ -279,7 +279,7 @@ namespace LearningBff.Services.Teacher
             var exam = await (await _examRepository.GetQueryableAsync())
                 .Include(e => e.ExamQuestions)
                     .ThenInclude(eq => eq.Question)
-                        .ThenInclude(q => q.Answers)
+                        .ThenInclude(q => q!.Answers)
                 .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
