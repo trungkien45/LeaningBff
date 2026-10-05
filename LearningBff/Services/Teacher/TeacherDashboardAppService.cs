@@ -12,18 +12,12 @@ using Microsoft.AspNetCore.Authorization;
 
 namespace LearningBff.Services.Teacher;
 
-[Authorize(Roles = LearningBffConsts.Teacher)]
-public class TeacherAppService : LearningBffAppService
+public class TeacherDashboardAppService : TeacherBaseAppService  
 {
     private record ExamStatRow(long SubjectId, int SubmissionCount, int PassedCount, float AvgScore);
 
-    private readonly LearningBffDbContext _db;
-    private readonly ICurrentUser _currentUser;
-
-    public TeacherAppService(LearningBffDbContext db, ICurrentUser currentUser)
+    public TeacherDashboardAppService(LearningBffDbContext db, ICurrentUser currentUser) : base(db, currentUser)
     {
-        _db = db;
-        _currentUser = currentUser;
     }
 
     /// <summary>

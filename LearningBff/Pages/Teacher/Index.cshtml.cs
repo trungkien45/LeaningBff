@@ -11,7 +11,7 @@ namespace LearningBff.Pages.Teacher;
 [Authorize(Roles = LearningBffConsts.Teacher)]
 public class IndexModel : AbpPageModel
 {
-    private readonly TeacherAppService _teacherAppService;
+    private readonly TeacherDashboardAppService _teacherDashboardAppService;
 
     public TeacherDashboardDto DashboardData { get; set; } = new();
 
@@ -21,15 +21,15 @@ public class IndexModel : AbpPageModel
     [BindProperty(SupportsGet = true)]
     public int CurrentPage { get; set; } = 1;
 
-    public IndexModel(TeacherAppService teacherAppService)
+    public IndexModel(TeacherDashboardAppService teacherDashboardAppService)
     {
-        _teacherAppService = teacherAppService;
+        _teacherDashboardAppService = teacherDashboardAppService;
     }
 
     public async Task OnGetAsync(string? search = null, int currentPage = 1)
     {
         Search = search;
         CurrentPage = currentPage < 1 ? 1 : currentPage;
-        DashboardData = await _teacherAppService.GetDashboardAsync(Search, CurrentPage, pageSize: 6);
+        DashboardData = await _teacherDashboardAppService.GetDashboardAsync(Search, CurrentPage, pageSize: 6);
     }
 }

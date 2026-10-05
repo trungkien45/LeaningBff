@@ -10,7 +10,24 @@ public class SubjectFilterDto
     public long Id { get; set; }
     public string Name { get; set; } = string.Empty;
 }
-
+public class ExamDetailDto
+{
+    public long Id { get; internal set; }
+    public string Title { get; internal set; }
+    public string? Description { get; internal set; }
+    public long SubjectId { get; internal set; }
+    public DateTime CreationTime { get; internal set; }
+    public int DurationInMinutes { get; internal set; }
+    public float PassScore { get; internal set; }
+    public float MaxScore { get; internal set; }
+    public bool IsPublished { get; internal set; }
+    public bool ShuffleQuestions { get; internal set; }
+    public bool ShuffleAnswers { get; internal set; }
+    public DateTime? StartTime { get; internal set; }
+    public DateTime? EndTime { get; internal set; }
+    public int? MaxAttempts { get; internal set; }
+    public List<QuestionDto> Questions { get; internal set; }
+}
 public class ExamSummaryDto
 {
     public long Id { get; set; }
@@ -33,7 +50,14 @@ public class ExamSummaryDto
     public bool CanTake { get; set; } = true;
     public int QuestionCount { get; set; }
 }
-
+public class ExamDto
+{
+    public long Id { get; set; }
+    public string Title { get; set; } = string.Empty;
+    public string? Description { get; set; }
+    public long SubjectId { get; set; }
+    public DateTime CreationTime { get; set; }
+}
 public class ExamTakeDto
 {
     public long ExamResultId { get; set; }
@@ -95,6 +119,8 @@ public class ExamResultDto
     public int TotalQuestions { get; set; }
     public int CorrectQuestions { get; set; }
     public List<ExamResultQuestionDto> Questions { get; set; } = new();
+    public string UserName { get; internal set; }
+    public string UserFullName { get; internal set; }
 }
 
 public class ExamResultQuestionDto

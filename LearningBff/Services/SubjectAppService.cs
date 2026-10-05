@@ -162,16 +162,16 @@ public class SubjectAppService : LearningBffAppService
     public async Task<List<TeacherSimpleDto>> GetAvailableTeachersAsync()
     {
         var teachers = await _userManager.GetUsersInRoleAsync("teacher");
-        var admins = await _userManager.GetUsersInRoleAsync("admin");
-        var combined = teachers.Concat(admins).DistinctBy(u => u.Id).ToList();
+        //var admins = await _userManager.GetUsersInRoleAsync("admin");
+        //var combined = teachers.Concat(admins).DistinctBy(u => u.Id).ToList();
 
         // Nếu chưa có user gán role, lấy tối đa 50 user hoạt động để chọn
-        if (!combined.Any())
-        {
-            combined = await _db.Users.AsNoTracking().Where(u => u.IsActive).Take(50).ToListAsync();
-        }
+        //if (!combined.Any())
+        //{
+        //    combined = await _db.Users.AsNoTracking().Where(u => u.IsActive).Take(50).ToListAsync();
+        //}
 
-        return combined.Select(u => new TeacherSimpleDto
+        return teachers.Select(u => new TeacherSimpleDto
         {
             Id = u.Id,
             UserName = u.UserName,

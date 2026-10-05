@@ -9,16 +9,11 @@ using Volo.Abp.Users;
 
 namespace LearningBff.Services.Teacher
 {
-    [Authorize(Roles = LearningBffConsts.Teacher)]
-    public class SubjectTeacherAppService : LearningBffAppService
+    public class SubjectTeacherAppService : TeacherBaseAppService
     {
-        private readonly LearningBffDbContext _db;
-        private readonly ICurrentUser _currentUser;
 
-        public SubjectTeacherAppService(LearningBffDbContext db, ICurrentUser currentUser)
+        public SubjectTeacherAppService(LearningBffDbContext db, ICurrentUser currentUser) : base(db, currentUser)
         {
-            _db = db;
-            _currentUser = currentUser;
         }
 
         public async Task<(List<SubjectDto> Items, int TotalCount)> GetMySubjectsAsync(string name, int page = 1, int pageSize = 10)
@@ -69,23 +64,7 @@ namespace LearningBff.Services.Teacher
                 StudentCount = subject.EnrollmentSubjects.Count(e => e.IsActive),
             };
         }
-        
-        private async Task<Subject> FindSubjectForTeacherAsync(long subjectId)
-        {
-            var userId = _currentUser.Id;
-            var subject = await _db.Subjects.AsNoTracking()
-                .Where(s => s.Id == subjectId && s.Teachers.Any(t => t.Id == userId))
-                .Include(s => s.Questions)
-                .Include(s => s.Exams)
-                .Include(s => s.EnrollmentSubjects)
-                .FirstOrDefaultAsync();
-            if (subject == null)
-            {
-                throw new AbpAuthorizationException("Không tìm thấy môn học hoặc bạn không có quyền truy cập.");
-            }
 
-            return subject;
-        }
 
     }
 }
