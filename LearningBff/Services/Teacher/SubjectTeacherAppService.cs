@@ -1,10 +1,8 @@
-﻿using LearningBff.Data;
 using LearningBff.Entities;
-using LearningBff.Services.Dtos;
-using Microsoft.AspNetCore.Authorization;
+using LearningBff.Dtos;
 using Microsoft.EntityFrameworkCore;
-using Volo.Abp;
 using Volo.Abp.Authorization;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace LearningBff.Services.Teacher
@@ -12,16 +10,15 @@ namespace LearningBff.Services.Teacher
     public class SubjectTeacherAppService : TeacherBaseAppService
     {
 
-        public SubjectTeacherAppService(LearningBffDbContext db, ICurrentUser currentUser) : base(db, currentUser)
+        public SubjectTeacherAppService(IRepository<Subject, long> subjectRepository, ICurrentUser currentUser) : base(subjectRepository, currentUser)
         {
         }
 
         public async Task<(List<SubjectDto> Items, int TotalCount)> GetMySubjectsAsync(string name, int page = 1, int pageSize = 10)
         {
             var userId = _currentUser.Id;
-            var query = _db.Subjects.AsNoTracking()
-                .Where(s => s.Teachers.Any(t => t.Id == userId) && s.Name.Contains(name))
-                .AsQueryable();
+            var query = (await _subjectRepository.GetQueryableAsync())
+                .Where(s => s.Teachers.Any(t => t.Id == userId) && s.Name.Contains(name));
 
             var totalCount = await query.CountAsync();
 

@@ -3,25 +3,25 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using LearningBff.Data;
 using LearningBff.Entities;
-using LearningBff.Services.Dtos;
 using Volo.Abp;
 using Volo.Abp.Application.Dtos;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Identity;
+using LearningBff.Dtos;
 
 namespace LearningBff.Services;
 
 public class SubjectAppService : LearningBffAppService
 {
-    private readonly LearningBffDbContext _db;
+    private readonly IRepository<Subject, long> _subjectRepository;
     private readonly IdentityUserManager _userManager;
 
     public SubjectAppService(
-        LearningBffDbContext db,
+        IRepository<Subject, long> subjectRepository,
         IdentityUserManager userManager)
     {
-        _db = db;
+        _subjectRepository = subjectRepository;
         _userManager = userManager;
     }
 
@@ -34,7 +34,7 @@ public class SubjectAppService : LearningBffAppService
         int maxResultCount = 10,
         bool? isActive = null)
     {
-        var query = _db.Subjects.AsNoTracking();
+        var query = await _subjectRepository.GetQueryableAsync();
         if (isActive.HasValue)
         {
             query = query.Where(s => s.IsActive == isActive.Value);
@@ -86,7 +86,7 @@ public class SubjectAppService : LearningBffAppService
     /// </summary>
     public async Task<List<SubjectDto>> GetListAsync(bool? isActive = null)
     {
-        var query = _db.Subjects.AsNoTracking();
+        var query = await _subjectRepository.GetQueryableAsync();
         if (isActive.HasValue)
         {
             query = query.Where(s => s.IsActive == isActive.Value);
@@ -126,8 +126,7 @@ public class SubjectAppService : LearningBffAppService
     /// </summary>
     public async Task<SubjectDto> GetAsync(long id)
     {
-        var s = await _db.Subjects
-            .AsNoTracking()
+        var s = await (await _subjectRepository.GetQueryableAsync())
             .Include(x => x.Teachers)
             .Include(x => x.Questions)
             .Include(x => x.Exams)

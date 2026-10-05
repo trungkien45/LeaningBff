@@ -3,22 +3,38 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using LearningBff.Data;
 using LearningBff.Entities;
-using LearningBff.Services.Dtos;
+using LearningBff.Dtos;
 using Volo.Abp;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace LearningBff.Services;
 
 public class LearningAppService : LearningBffAppService
 {
-    private readonly LearningBffDbContext _db;
+    private record LessonStatRow(long SubjectId, int TotalLessons, int CompletedLessons);
+
+    private readonly IRepository<EnrollmentSubject, long> _enrollmentSubjectRepository;
+    private readonly IRepository<Subject, long> _subjectRepository;
+    private readonly IRepository<LearningProgress, long> _learningProgressRepository;
+    private readonly IRepository<Lesson, long> _lessonRepository;
+    private readonly IRepository<Chapter, long> _chapterRepository;
     private readonly ICurrentUser _currentUser;
 
-    public LearningAppService(LearningBffDbContext db, ICurrentUser currentUser)
+    public LearningAppService(
+        IRepository<EnrollmentSubject, long> enrollmentSubjectRepository,
+        IRepository<Subject, long> subjectRepository,
+        IRepository<LearningProgress, long> learningProgressRepository,
+        IRepository<Lesson, long> lessonRepository,
+        IRepository<Chapter, long> chapterRepository,
+        ICurrentUser currentUser)
     {
-        _db = db;
+        _enrollmentSubjectRepository = enrollmentSubjectRepository;
+        _subjectRepository = subjectRepository;
+        _learningProgressRepository = learningProgressRepository;
+        _lessonRepository = lessonRepository;
+        _chapterRepository = chapterRepository;
         _currentUser = currentUser;
     }
 
@@ -35,7 +51,7 @@ public class LearningAppService : LearningBffAppService
             return (new List<SubjectCardDto>(), 0);
         }
 
-        var enrollQuery = _db.EnrollmentSubjects.AsNoTracking()
+        var enrollQuery = (await _enrollmentSubjectRepository.GetQueryableAsync())
             .Where(e => e.UserId == userId.Value && e.IsActive);
 
         var totalCount = await enrollQuery.CountAsync();
@@ -45,25 +61,32 @@ public class LearningAppService : LearningBffAppService
         if (totalPages > 0 && safePage > totalPages) safePage = totalPages;
 
         var enrollments = await enrollQuery
-            .OrderByDescending(e => e.RegisteredAt)
-            .Skip((safePage - 1) * pageSize)
-            .Take(pageSize)
-            .Include(e => e.Subject)
-                .ThenInclude(s => s!.Chapters)
-                    .ThenInclude(c => c.Lessons)
             .Include(e => e.Subject)
                 .ThenInclude(s => s!.Teachers)
             .Include(e => e.Subject)
                 .ThenInclude(s => s!.Exams)
+            .OrderByDescending(e => e.RegisteredAt)
+            .Skip((safePage - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
-        var pagedSubjectIds = enrollments.Select(e => e.SubjectId).ToList();
+        // Số chương / bài học / bài đã hoàn thành của các môn trong trang hiện tại (gom nhóm ngay trong SQL)
+        var pageSubjectIds = enrollments.Select(e => e.SubjectId).Distinct().ToList();
 
-        // Load completed lesson IDs của user cho các môn trong trang hiện tại
-        var completedLessonIds = await _db.LearningProgesses.AsNoTracking()
-            .Where(lp => lp.UserId == userId.Value && lp.IsCompleted)
-            .Select(lp => lp.LessonId)
-            .ToHashSetAsync();
+        var lessonStatDict = await (await _lessonRepository.GetQueryableAsync())
+            .Where(l => pageSubjectIds.Contains(l.Chapter.SubjectId))
+            .GroupBy(l => l.Chapter.SubjectId)
+            .Select(g => new LessonStatRow(
+                g.Key,
+                g.Count(),
+                g.Count(l => l.LearningProgresses.Any(p => p.UserId == userId.Value && p.IsCompleted))))
+            .ToDictionaryAsync(x => x.SubjectId);
+
+        var chapterCountDict = await (await _chapterRepository.GetQueryableAsync())
+            .Where(c => pageSubjectIds.Contains(c.SubjectId))
+            .GroupBy(c => c.SubjectId)
+            .Select(g => new { SubjectId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.SubjectId, x => x.Count);
 
         var result = new List<SubjectCardDto>();
         foreach (var enrollment in enrollments)
@@ -71,9 +94,10 @@ public class LearningAppService : LearningBffAppService
             var s = enrollment.Subject;
             if (s == null) continue;
 
-            var allLessons = s.Chapters.SelectMany(c => c.Lessons).ToList();
-            var totalLessons = allLessons.Count;
-            var completedCount = allLessons.Count(l => completedLessonIds.Contains(l.Id));
+            lessonStatDict.TryGetValue(s.Id, out var lessonStat);
+            chapterCountDict.TryGetValue(s.Id, out var chapterCount);
+            var totalLessons = lessonStat?.TotalLessons ?? 0;
+            var completedCount = lessonStat?.CompletedLessons ?? 0;
             var progress = totalLessons > 0 ? (int)Math.Round((double)completedCount / totalLessons * 100) : 0;
 
             result.Add(new SubjectCardDto
@@ -84,7 +108,7 @@ public class LearningAppService : LearningBffAppService
                 IsActive = s.IsActive,
                 IsEnrolled = true,
                 EnrolledAt = enrollment.RegisteredAt,
-                TotalChapters = s.Chapters.Count,
+                TotalChapters = chapterCount,
                 TotalLessons = totalLessons,
                 CompletedLessons = completedCount,
                 ProgressPercentage = progress,
@@ -112,9 +136,8 @@ public class LearningAppService : LearningBffAppService
     {
         var userId = _currentUser.Id;
 
-        var query = _db.Subjects.AsNoTracking()
-            .Where(s => s.IsActive)
-            .AsQueryable();
+        var query = (await _subjectRepository.GetQueryableAsync())
+            .Where(s => s.IsActive);
 
         if (!string.IsNullOrWhiteSpace(search))
         {
@@ -130,39 +153,54 @@ public class LearningAppService : LearningBffAppService
         if (totalPages > 0 && safePage > totalPages) safePage = totalPages;
 
         var subjects = await query
+            .Include(s => s.Teachers)
+            .Include(s => s.Exams)
             .OrderBy(s => s.Name)
             .Skip((safePage - 1) * pageSize)
             .Take(pageSize)
-            .Include(s => s.Teachers)
-            .Include(s => s.Chapters)
-                .ThenInclude(c => c.Lessons)
-            .Include(s => s.Exams)
             .ToListAsync();
 
         HashSet<long> enrolledSubjectIds = new();
-        HashSet<long> completedLessonIds = new();
+        Dictionary<long, LessonStatRow> lessonStatDict = new();
+        Dictionary<long, int> chapterCountDict = new();
 
         if (userId.HasValue && subjects.Any())
         {
-            var pagedIds = subjects.Select(s => s.Id).ToList();
+            var pageSubjectIds = subjects.Select(s => s.Id).ToList();
 
-            enrolledSubjectIds = (await _db.EnrollmentSubjects.AsNoTracking()
-                .Where(e => e.UserId == userId.Value && e.IsActive)
+            enrolledSubjectIds = (await (await _enrollmentSubjectRepository.GetQueryableAsync())
+                .Where(e => e.UserId == userId.Value && e.IsActive && pageSubjectIds.Contains(e.SubjectId))
                 .Select(e => e.SubjectId)
                 .ToListAsync()).ToHashSet();
 
-            completedLessonIds = (await _db.LearningProgesses.AsNoTracking()
-                .Where(lp => lp.UserId == userId.Value && lp.IsCompleted)
-                .Select(lp => lp.LessonId)
-                .ToListAsync()).ToHashSet();
+            lessonStatDict = await (await _lessonRepository.GetQueryableAsync())
+                .Where(l => pageSubjectIds.Contains(l.Chapter.SubjectId))
+                .GroupBy(l => l.Chapter.SubjectId)
+                .Select(g => new LessonStatRow(
+                    g.Key,
+                    g.Count(),
+                    g.Count(l => l.LearningProgresses.Any(p => p.UserId == userId.Value && p.IsCompleted))))
+                .ToDictionaryAsync(x => x.SubjectId);
+        }
+
+        if (subjects.Any())
+        {
+            var pageSubjectIds = subjects.Select(s => s.Id).ToList();
+
+            chapterCountDict = await (await _chapterRepository.GetQueryableAsync())
+                .Where(c => pageSubjectIds.Contains(c.SubjectId))
+                .GroupBy(c => c.SubjectId)
+                .Select(g => new { SubjectId = g.Key, Count = g.Count() })
+                .ToDictionaryAsync(x => x.SubjectId, x => x.Count);
         }
 
         var result = new List<SubjectCardDto>();
         foreach (var s in subjects)
         {
-            var allLessons = s.Chapters.SelectMany(c => c.Lessons).ToList();
-            var totalLessons = allLessons.Count;
-            var completedCount = allLessons.Count(l => completedLessonIds.Contains(l.Id));
+            lessonStatDict.TryGetValue(s.Id, out var lessonStat);
+            chapterCountDict.TryGetValue(s.Id, out var chapterCount);
+            var totalLessons = lessonStat?.TotalLessons ?? 0;
+            var completedCount = lessonStat?.CompletedLessons ?? 0;
             var progress = totalLessons > 0 ? (int)Math.Round((double)completedCount / totalLessons * 100) : 0;
 
             result.Add(new SubjectCardDto
@@ -172,7 +210,7 @@ public class LearningAppService : LearningBffAppService
                 Description = s.Description,
                 IsActive = s.IsActive,
                 IsEnrolled = enrolledSubjectIds.Contains(s.Id),
-                TotalChapters = s.Chapters.Count,
+                TotalChapters = chapterCount,
                 TotalLessons = totalLessons,
                 CompletedLessons = completedCount,
                 ProgressPercentage = progress,
@@ -197,7 +235,7 @@ public class LearningAppService : LearningBffAppService
     {
         var userId = _currentUser.Id;
 
-        var subject = await _db.Subjects.AsNoTracking()
+        var subject = await (await _subjectRepository.GetQueryableAsync())
             .Include(s => s.Teachers)
             .Include(s => s.Chapters)
                 .ThenInclude(c => c.Lessons)
@@ -212,11 +250,16 @@ public class LearningAppService : LearningBffAppService
 
         if (userId.HasValue)
         {
-            isEnrolled = await _db.EnrollmentSubjects.AnyAsync(e =>
+            isEnrolled = await _enrollmentSubjectRepository.AnyAsync(e =>
                 e.UserId == userId.Value && e.SubjectId == subjectId && e.IsActive);
 
-            var progresses = await _db.LearningProgesses.AsNoTracking()
-                .Where(lp => lp.UserId == userId.Value && lp.IsCompleted)
+            var subjectLessonIdsQuery = (await _lessonRepository.GetQueryableAsync())
+                .Where(l => l.Chapter.SubjectId == subjectId)
+                .Select(l => l.Id);
+
+            var progresses = await (await _learningProgressRepository.GetQueryableAsync())
+                .Where(lp => lp.UserId == userId.Value && lp.IsCompleted && subjectLessonIdsQuery.Contains(lp.LessonId))
+                .Select(lp => new { lp.LessonId, lp.CompletedAt })
                 .ToListAsync();
 
             completedLessonDict = progresses.ToDictionary(p => p.LessonId, p => p.CompletedAt);
@@ -304,14 +347,14 @@ public class LearningAppService : LearningBffAppService
     {
         var userId = _currentUser.Id;
 
-        var lesson = await _db.Lessons.AsNoTracking()
+        var lesson = await (await _lessonRepository.GetQueryableAsync())
             .Include(l => l.Chapter)
                 .ThenInclude(c => c.Subject)
             .FirstOrDefaultAsync(l => l.Id == lessonId)
             ?? throw new UserFriendlyException("Không tìm thấy bài học.");
 
         var chapter = lesson.Chapter;
-        var allLessonsInChapter = await _db.Lessons.AsNoTracking()
+        var allLessonsInChapter = await (await _lessonRepository.GetQueryableAsync())
             .Where(l => l.ChapterId == chapter.Id)
             .OrderBy(l => l.Id)
             .ToListAsync();
@@ -327,7 +370,7 @@ public class LearningAppService : LearningBffAppService
 
         if (userId.HasValue)
         {
-            var progress = await _db.LearningProgesses.AsNoTracking()
+            var progress = await (await _learningProgressRepository.GetQueryableAsync())
                 .FirstOrDefaultAsync(lp => lp.UserId == userId.Value && lp.LessonId == lessonId);
             if (progress != null && progress.IsCompleted)
             {
@@ -362,8 +405,7 @@ public class LearningAppService : LearningBffAppService
         var userId = _currentUser.Id
             ?? throw new UserFriendlyException("Vui lòng đăng nhập để lưu tiến độ học tập.");
 
-        var progress = await _db.LearningProgesses
-            .FirstOrDefaultAsync(lp => lp.UserId == userId && lp.LessonId == lessonId);
+        var progress = await _learningProgressRepository.FirstOrDefaultAsync(lp => lp.UserId == userId && lp.LessonId == lessonId);
 
         if (progress == null)
         {
@@ -374,15 +416,15 @@ public class LearningAppService : LearningBffAppService
                 IsCompleted = true,
                 CompletedAt = DateTime.UtcNow
             };
-            _db.LearningProgesses.Add(progress);
+            await _learningProgressRepository.InsertAsync(progress, autoSave: true);
         }
         else
         {
             progress.IsCompleted = !progress.IsCompleted;
             progress.CompletedAt = progress.IsCompleted ? DateTime.UtcNow : null;
+            await _learningProgressRepository.UpdateAsync(progress, autoSave: true);
         }
 
-        await _db.SaveChangesAsync();
         return progress.IsCompleted;
     }
 
@@ -394,33 +436,31 @@ public class LearningAppService : LearningBffAppService
         var userId = _currentUser.Id
             ?? throw new UserFriendlyException("Vui lòng đăng nhập để đăng ký môn học.");
 
-        var subject = await _db.Subjects.FindAsync(subjectId)
+        var subject = await _subjectRepository.FindAsync(subjectId)
             ?? throw new UserFriendlyException("Không tìm thấy môn học.");
 
         if (!subject.IsActive)
             throw new UserFriendlyException("Môn học này hiện chưa mở.");
 
-        var enrollment = await _db.EnrollmentSubjects
-            .FirstOrDefaultAsync(e => e.UserId == userId && e.SubjectId == subjectId);
+        var enrollment = await _enrollmentSubjectRepository.FirstOrDefaultAsync(e => e.UserId == userId && e.SubjectId == subjectId);
 
         if (enrollment != null)
         {
             enrollment.IsActive = true;
             enrollment.RegisteredAt = DateTime.UtcNow;
             enrollment.UnregisteredAt = null;
+            await _enrollmentSubjectRepository.UpdateAsync(enrollment, autoSave: true);
         }
         else
         {
-            _db.EnrollmentSubjects.Add(new EnrollmentSubject
+            await _enrollmentSubjectRepository.InsertAsync(new EnrollmentSubject
             {
                 UserId = userId,
                 SubjectId = subjectId,
                 IsActive = true,
                 RegisteredAt = DateTime.UtcNow
-            });
+            }, autoSave: true);
         }
-
-        await _db.SaveChangesAsync();
     }
 
     /// <summary>
@@ -431,8 +471,7 @@ public class LearningAppService : LearningBffAppService
         var userId = _currentUser.Id
             ?? throw new UserFriendlyException("Vui lòng đăng nhập để thực hiện.");
 
-        var enrollment = await _db.EnrollmentSubjects
-            .FirstOrDefaultAsync(e => e.UserId == userId && e.SubjectId == subjectId && e.IsActive);
+        var enrollment = await _enrollmentSubjectRepository.FirstOrDefaultAsync(e => e.UserId == userId && e.SubjectId == subjectId && e.IsActive);
 
         if (enrollment == null)
         {
@@ -440,13 +479,12 @@ public class LearningAppService : LearningBffAppService
         }
 
         // Kiểm tra backend: Không cho phép hủy nếu học viên đã hoàn thành bất kỳ bài học nào trong môn này
-        var lessonIds = await _db.Lessons
+        var lessonIdsQuery = (await _lessonRepository.GetQueryableAsync())
             .Where(l => l.Chapter.SubjectId == subjectId)
-            .Select(l => l.Id)
-            .ToListAsync();
+            .Select(l => l.Id);
 
-        var hasCompleted = await _db.LearningProgesses
-            .AnyAsync(lp => lp.UserId == userId && lp.IsCompleted && lessonIds.Contains(lp.LessonId));
+        var hasCompleted = await (await _learningProgressRepository.GetQueryableAsync())
+            .AnyAsync(lp => lp.UserId == userId && lp.IsCompleted && lessonIdsQuery.Contains(lp.LessonId));
 
         if (hasCompleted)
         {
@@ -455,6 +493,6 @@ public class LearningAppService : LearningBffAppService
 
         enrollment.IsActive = false;
         enrollment.UnregisteredAt = DateTime.UtcNow;
-        await _db.SaveChangesAsync();
+        await _enrollmentSubjectRepository.UpdateAsync(enrollment, autoSave: true);
     }
 }

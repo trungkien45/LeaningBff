@@ -1,26 +1,31 @@
+using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using LearningBff.Data;
 using LearningBff.Entities;
-using LearningBff.Services.Dtos;
+using LearningBff.Dtos;
 using Volo.Abp;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Identity;
 
 namespace LearningBff.Services;
 
 [Authorize(Roles = LearningBffConsts.Admin)]
 public class SubjectAdminAppService : LearningBffAppService
 {
-    private readonly LearningBffDbContext _db;
+    private readonly IRepository<Subject, long> _subjectRepository;
+    private readonly IRepository<IdentityUser, Guid> _userRepository;
     private readonly SubjectAppService _subjectAppService;
 
     public SubjectAdminAppService(
-        LearningBffDbContext db,
+        IRepository<Subject, long> subjectRepository,
+        IRepository<IdentityUser, Guid> userRepository,
         SubjectAppService subjectAppService)
     {
-        _db = db;
+        _subjectRepository = subjectRepository;
+        _userRepository = userRepository;
         _subjectAppService = subjectAppService;
     }
 
@@ -29,8 +34,7 @@ public class SubjectAdminAppService : LearningBffAppService
     /// </summary>
     public async Task<(int Total, int Active, int Assigned, int Unassigned)> GetAdminStatsAsync()
     {
-        var list = await _db.Subjects
-            .AsNoTracking()
+        var list = await (await _subjectRepository.GetQueryableAsync())
             .Select(s => new { s.IsActive, HasTeachers = s.Teachers.Any() })
             .ToListAsync();
 
@@ -53,7 +57,7 @@ public class SubjectAdminAppService : LearningBffAppService
             throw new UserFriendlyException("Tên môn học không được để trống.");
         }
 
-        var exists = await _db.Subjects.AnyAsync(x => x.Name.ToLower() == trimmedName.ToLower());
+        var exists = await _subjectRepository.AnyAsync(x => x.Name.ToLower() == trimmedName.ToLower());
         if (exists)
         {
             throw new UserFriendlyException($"Môn học '{trimmedName}' đã tồn tại trong hệ thống.");
@@ -63,14 +67,11 @@ public class SubjectAdminAppService : LearningBffAppService
 
         if (input.TeacherIds != null && input.TeacherIds.Any())
         {
-            var teachers = await _db.Users
-                .Where(u => input.TeacherIds.Contains(u.Id))
-                .ToListAsync();
+            var teachers = await _userRepository.GetListAsync(u => input.TeacherIds.Contains(u.Id));
             subject.Teachers.AddRange(teachers);
         }
 
-        _db.Subjects.Add(subject);
-        await _db.SaveChangesAsync();
+        await _subjectRepository.InsertAsync(subject, autoSave: true);
 
         return await _subjectAppService.GetAsync(subject.Id);
     }
@@ -86,12 +87,12 @@ public class SubjectAdminAppService : LearningBffAppService
             throw new UserFriendlyException("Tên môn học không được để trống.");
         }
 
-        var subject = await _db.Subjects
+        var subject = await (await _subjectRepository.GetQueryableAsync())
             .Include(s => s.Teachers)
             .FirstOrDefaultAsync(s => s.Id == id)
             ?? throw new UserFriendlyException($"Không tìm thấy môn học với mã {id}.");
 
-        var duplicate = await _db.Subjects.AnyAsync(x => x.Name.ToLower() == trimmedName.ToLower() && x.Id != id);
+        var duplicate = await _subjectRepository.AnyAsync(x => x.Name.ToLower() == trimmedName.ToLower() && x.Id != id);
         if (duplicate)
         {
             throw new UserFriendlyException($"Môn học '{trimmedName}' đã tồn tại trong hệ thống.");
@@ -105,13 +106,11 @@ public class SubjectAdminAppService : LearningBffAppService
         subject.Teachers.Clear();
         if (input.TeacherIds != null && input.TeacherIds.Any())
         {
-            var teachers = await _db.Users
-                .Where(u => input.TeacherIds.Contains(u.Id))
-                .ToListAsync();
+            var teachers = await _userRepository.GetListAsync(u => input.TeacherIds.Contains(u.Id));
             subject.Teachers.AddRange(teachers);
         }
 
-        await _db.SaveChangesAsync();
+        await _subjectRepository.UpdateAsync(subject, autoSave: true);
         return await _subjectAppService.GetAsync(subject.Id);
     }
 
@@ -120,7 +119,7 @@ public class SubjectAdminAppService : LearningBffAppService
     /// </summary>
     public async Task AssignTeachersAsync(long subjectId, List<Guid> teacherIds)
     {
-        var subject = await _db.Subjects
+        var subject = await (await _subjectRepository.GetQueryableAsync())
             .Include(s => s.Teachers)
             .FirstOrDefaultAsync(s => s.Id == subjectId)
             ?? throw new UserFriendlyException($"Không tìm thấy môn học với mã {subjectId}.");
@@ -128,13 +127,11 @@ public class SubjectAdminAppService : LearningBffAppService
         subject.Teachers.Clear();
         if (teacherIds != null && teacherIds.Any())
         {
-            var teachers = await _db.Users
-                .Where(u => teacherIds.Contains(u.Id))
-                .ToListAsync();
+            var teachers = await _userRepository.GetListAsync(u => teacherIds.Contains(u.Id));
             subject.Teachers.AddRange(teachers);
         }
 
-        await _db.SaveChangesAsync();
+        await _subjectRepository.UpdateAsync(subject, autoSave: true);
     }
 
     /// <summary>
@@ -142,12 +139,11 @@ public class SubjectAdminAppService : LearningBffAppService
     /// </summary>
     public async Task DeleteAsync(long id)
     {
-        var subject = await _db.Subjects
+        var subject = await (await _subjectRepository.GetQueryableAsync())
             .Include(s => s.Teachers)
             .FirstOrDefaultAsync(s => s.Id == id)
             ?? throw new UserFriendlyException($"Không tìm thấy môn học với mã {id}.");
 
-        _db.Subjects.Remove(subject);
-        await _db.SaveChangesAsync();
+        await _subjectRepository.DeleteAsync(subject, autoSave: true);
     }
 }

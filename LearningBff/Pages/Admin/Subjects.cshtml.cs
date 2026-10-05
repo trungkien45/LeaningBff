@@ -6,11 +6,11 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
 using LearningBff.Services;
-using LearningBff.Services.Dtos;
+using LearningBff.Dtos;
 
 namespace LearningBff.Pages.Admin;
 
-[Authorize(Roles = "admin,Admin")]
+[Authorize(Roles = LearningBffConsts.Admin)]
 public class SubjectsModel : AbpPageModel
 {
     private readonly SubjectAppService _subjectAppService;

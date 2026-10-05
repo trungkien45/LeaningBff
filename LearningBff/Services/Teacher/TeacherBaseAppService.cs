@@ -1,8 +1,8 @@
-﻿using LearningBff.Data;
 using LearningBff.Entities;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.Authorization;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace LearningBff.Services.Teacher;
@@ -10,18 +10,19 @@ namespace LearningBff.Services.Teacher;
 [Authorize(Roles = LearningBffConsts.Teacher)]
 public abstract class TeacherBaseAppService : LearningBffAppService
 {
-    protected readonly LearningBffDbContext _db;
+    protected readonly IRepository<Subject, long> _subjectRepository;
     protected readonly ICurrentUser _currentUser;
 
-    public TeacherBaseAppService(LearningBffDbContext db, ICurrentUser currentUser)
+    public TeacherBaseAppService(IRepository<Subject, long> subjectRepository, ICurrentUser currentUser)
     {
-        _db = db;
+        _subjectRepository = subjectRepository;
         _currentUser = currentUser;
     }
+
     protected async Task<Subject> FindSubjectForTeacherAsync(long subjectId)
     {
         var userId = _currentUser.Id;
-        var subject = await _db.Subjects.AsNoTracking()
+        var subject = await (await _subjectRepository.GetQueryableAsync())
             .Where(s => s.Id == subjectId && s.Teachers.Any(t => t.Id == userId))
             .Include(s => s.Questions)
             .Include(s => s.Exams)
@@ -34,6 +35,4 @@ public abstract class TeacherBaseAppService : LearningBffAppService
 
         return subject;
     }
-
-
 }

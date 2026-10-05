@@ -2,9 +2,9 @@ using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
-using LearningBff.Services.Dtos;
 using LearningBff.Services;
 using LearningBff.Services.Teacher;
+using LearningBff.Dtos;
 
 namespace LearningBff.Pages.Teacher;
 

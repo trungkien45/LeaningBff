@@ -1,6 +1,6 @@
 ﻿using LearningBff.Entities;
 
-namespace LearningBff.Services.Dtos
+namespace LearningBff.Dtos
 {
     public class CreateuUpdateQuestionDto
     {

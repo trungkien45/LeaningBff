@@ -3,12 +3,11 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using LearningBff.Data;
 using LearningBff.Entities;
-using LearningBff.Services.Dtos;
+using LearningBff.Dtos;
 using Volo.Abp;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
-using Microsoft.AspNetCore.Authorization;
 
 namespace LearningBff.Services.Teacher;
 
@@ -16,8 +15,23 @@ public class TeacherDashboardAppService : TeacherBaseAppService
 {
     private record ExamStatRow(long SubjectId, int SubmissionCount, int PassedCount, float AvgScore);
 
-    public TeacherDashboardAppService(LearningBffDbContext db, ICurrentUser currentUser) : base(db, currentUser)
+    private readonly IRepository<EnrollmentSubject, long> _enrollmentSubjectRepository;
+    private readonly IRepository<Exam, long> _examRepository;
+    private readonly IRepository<Question, long> _questionRepository;
+    private readonly IRepository<ExamResult, long> _examResultRepository;
+
+    public TeacherDashboardAppService(
+        IRepository<Subject, long> subjectRepository,
+        IRepository<EnrollmentSubject, long> enrollmentSubjectRepository,
+        IRepository<Exam, long> examRepository,
+        IRepository<Question, long> questionRepository,
+        IRepository<ExamResult, long> examResultRepository,
+        ICurrentUser currentUser) : base(subjectRepository, currentUser)
     {
+        _enrollmentSubjectRepository = enrollmentSubjectRepository;
+        _examRepository = examRepository;
+        _questionRepository = questionRepository;
+        _examResultRepository = examResultRepository;
     }
 
     /// <summary>
@@ -31,73 +45,52 @@ public class TeacherDashboardAppService : TeacherBaseAppService
         var userId = _currentUser.Id
             ?? throw new UserFriendlyException("Vui lòng đăng nhập.");
 
-        // Các môn học mà giáo viên này phụ trách
-        var mySubjectIds = await _db.Subjects.AsNoTracking()
+        // Các môn học mà giáo viên này phụ trách (giữ dạng sub-query, không nạp danh sách ID vào RAM)
+        var mySubjectIdsQuery = (await _subjectRepository.GetQueryableAsync())
             .Where(s => s.Teachers.Any(t => t.Id == userId))
-            .Select(s => s.Id)
-            .ToListAsync();
+            .Select(s => s.Id);
 
-        // Nếu là admin: xem tất cả môn học
-        var isAdminOrNoSubject = !mySubjectIds.Any() && (_currentUser.IsInRole("admin") || _currentUser.IsInRole("Admin"));
-        var baseSubjectQuery = _db.Subjects.AsNoTracking();
-        if (!isAdminOrNoSubject)
-        {
-            baseSubjectQuery = baseSubjectQuery.Where(s => mySubjectIds.Contains(s.Id));
-        }
-
-        var allSubjectIds = await baseSubjectQuery.Select(s => s.Id).ToListAsync();
+        var baseSubjectQuery = (await _subjectRepository.GetQueryableAsync())
+            .Where(s => mySubjectIdsQuery.Contains(s.Id));
 
         // 1. Thống kê tổng quan cho Stat Cards (Query trực tiếp trên DB, không kéo dữ liệu vào RAM)
-        var totalSubjects = allSubjectIds.Count;
+        var totalSubjects = await baseSubjectQuery.CountAsync();
 
-        var totalStudents = allSubjectIds.Any()
-            ? await _db.EnrollmentSubjects.AsNoTracking()
-                .Where(e => allSubjectIds.Contains(e.SubjectId) && e.IsActive)
-                .Select(e => e.UserId)
-                .Distinct()
-                .CountAsync()
-            : 0;
+        var totalStudents = await (await _enrollmentSubjectRepository.GetQueryableAsync())
+            .Where(e => mySubjectIdsQuery.Contains(e.SubjectId) && e.IsActive)
+            .Select(e => e.UserId)
+            .Distinct()
+            .CountAsync();
 
-        var totalExams = allSubjectIds.Any()
-            ? await _db.Exams.AsNoTracking().CountAsync(e => allSubjectIds.Contains(e.SubjectId))
-            : 0;
+        var totalExams = await (await _examRepository.GetQueryableAsync())
+            .CountAsync(e => mySubjectIdsQuery.Contains(e.SubjectId));
 
-        var totalQuestions = allSubjectIds.Any()
-            ? await _db.Questions.AsNoTracking().CountAsync(q => allSubjectIds.Contains(q.SubjectId))
-            : 0;
+        var totalQuestions = await (await _questionRepository.GetQueryableAsync())
+            .CountAsync(q => mySubjectIdsQuery.Contains(q.SubjectId));
 
-        var totalSubmittedExams = allSubjectIds.Any()
-            ? await _db.ExamResults.AsNoTracking()
-                .CountAsync(r => r.Exam != null && allSubjectIds.Contains(r.Exam.SubjectId) && r.Status == ExamResultStatus.Submitted)
-            : 0;
+        var totalSubmittedExams = await (await _examResultRepository.GetQueryableAsync())
+            .CountAsync(r => r.Exam != null && mySubjectIdsQuery.Contains(r.Exam.SubjectId) && r.Status == ExamResultStatus.Submitted);
 
-        var totalPassedExams = allSubjectIds.Any()
-            ? await _db.ExamResults.AsNoTracking()
-                .CountAsync(r => r.Exam != null && allSubjectIds.Contains(r.Exam.SubjectId) && r.Status == ExamResultStatus.Submitted && r.IsPassed)
-            : 0;
+        var totalPassedExams = await (await _examResultRepository.GetQueryableAsync())
+            .CountAsync(r => r.Exam != null && mySubjectIdsQuery.Contains(r.Exam.SubjectId) && r.Status == ExamResultStatus.Submitted && r.IsPassed);
 
         // 2. Lấy 10 bài nộp gần nhất (Chỉ load đúng 10 bản ghi từ SQL)
-        var recent = allSubjectIds.Any()
-            ? await _db.ExamResults.AsNoTracking()
-                .Where(r => r.Exam != null && allSubjectIds.Contains(r.Exam.SubjectId) && r.Status == ExamResultStatus.Submitted)
-                .Include(r => r.User)
-                .Include(r => r.Exam)
-                    .ThenInclude(e => e!.Subject)
-                .OrderByDescending(r => r.SubmitTime)
-                .Take(10)
-                .Select(r => new RecentSubmissionDto
-                {
-                    ResultId = r.Id,
-                    StudentName = r.User != null ? (!string.IsNullOrEmpty(r.User.Name) ? r.User.Name : r.User.UserName) : "Học viên",
-                    ExamTitle = r.ExamTitle ?? (r.Exam != null ? r.Exam.Title : "—"),
-                    SubjectName = r.Exam != null && r.Exam.Subject != null ? r.Exam.Subject.Name : "—",
-                    Score = r.Score,
-                    MaxScore = r.MaxScore,
-                    IsPassed = r.IsPassed,
-                    SubmitTime = r.SubmitTime ?? r.CreationTime
-                })
-                .ToListAsync()
-            : new List<RecentSubmissionDto>();
+        var recent = await (await _examResultRepository.GetQueryableAsync())
+            .Where(r => r.Exam != null && mySubjectIdsQuery.Contains(r.Exam.SubjectId) && r.Status == ExamResultStatus.Submitted)
+            .OrderByDescending(r => r.SubmitTime)
+            .Take(10)
+            .Select(r => new RecentSubmissionDto
+            {
+                ResultId = r.Id,
+                StudentName = r.User != null ? (!string.IsNullOrEmpty(r.User.Name) ? r.User.Name : r.User.UserName) : "Học viên",
+                ExamTitle = r.ExamTitle ?? (r.Exam != null ? r.Exam.Title : "—"),
+                SubjectName = r.Exam != null && r.Exam.Subject != null ? r.Exam.Subject.Name : "—",
+                Score = r.Score,
+                MaxScore = r.MaxScore,
+                IsPassed = r.IsPassed,
+                SubmitTime = r.SubmitTime ?? r.CreationTime
+            })
+            .ToListAsync();
 
         // 3. Phân trang và tìm kiếm danh sách môn học của giáo viên
         var subjectQuery = baseSubjectQuery;
@@ -127,7 +120,7 @@ public class TeacherDashboardAppService : TeacherBaseAppService
 
         // 4. Thống kê kết quả thi cho các môn trên trang hiện tại trực tiếp bằng SQL GroupBy
         var examStats = pageSubjectIds.Any()
-            ? await _db.ExamResults.AsNoTracking()
+            ? await (await _examResultRepository.GetQueryableAsync())
                 .Where(r => r.Exam != null && pageSubjectIds.Contains(r.Exam.SubjectId) && r.Status == ExamResultStatus.Submitted)
                 .GroupBy(r => r.Exam!.SubjectId)
                 .Select(g => new ExamStatRow(

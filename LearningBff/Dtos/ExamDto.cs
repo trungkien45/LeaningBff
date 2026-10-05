@@ -3,7 +3,7 @@ using System.Collections.Generic;
 using System.Text.Json.Serialization;
 using LearningBff.Entities;
 
-namespace LearningBff.Services.Dtos;
+namespace LearningBff.Dtos;
 
 public class SubjectFilterDto
 {

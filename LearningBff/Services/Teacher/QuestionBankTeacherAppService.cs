@@ -1,23 +1,32 @@
-﻿using LearningBff.Data;
 using LearningBff.Entities;
-using LearningBff.Services.Dtos;
+using LearningBff.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp.Authorization;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace LearningBff.Services.Teacher;
 
 public class QuestionBankTeacherAppService : TeacherBaseAppService
 {
-    public QuestionBankTeacherAppService(LearningBffDbContext db, ICurrentUser currentUser) : base(db, currentUser)
+    private readonly IRepository<Question, long> _questionRepository;
+    private readonly IRepository<Answer, long> _answerRepository;
+
+    public QuestionBankTeacherAppService(
+        IRepository<Subject, long> subjectRepository,
+        IRepository<Question, long> questionRepository,
+        IRepository<Answer, long> answerRepository,
+        ICurrentUser currentUser) : base(subjectRepository, currentUser)
     {
+        _questionRepository = questionRepository;
+        _answerRepository = answerRepository;
     }
     public async Task<(List<QuestionDto> Questions, int TotalCount)> GetQuestionsOfSubjectAsync(long subjectId, string searchName = "",
         int page = 1,
         int pageSize = 9)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
-        var query = _db.Questions.AsNoTracking()
+        var query = (await _questionRepository.GetQueryableAsync())
             .Where(q => q.SubjectId == subjectId && (string.IsNullOrEmpty(searchName) || q.Title.Contains(searchName)))
             .OrderBy(q => q.CreationTime);
         var totalCount = await query.CountAsync();
@@ -39,7 +48,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
     public async Task<QuestionDto> GetQuestionDetailAsync(long subjectId, long questionId)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
-        var question = await _db.Questions.AsNoTracking()
+        var question = await (await _questionRepository.GetQueryableAsync())
             .Where(q => q.SubjectId == subjectId && q.Id == questionId)
             .FirstOrDefaultAsync();
         if (question == null)
@@ -60,7 +69,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
     public async Task<QuestionDto> CreateQuestionAsync(long subjectId, CreateQuestionDto input)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
-        if (await _db.Questions.AnyAsync(q => q.SubjectId == subjectId && q.Title == input.Title))
+        if (await _questionRepository.AnyAsync(q => q.SubjectId == subjectId && q.Title == input.Title))
         {
             throw new AbpAuthorizationException("Đã tồn tại câu hỏi với tiêu đề này trong môn học.");
         }
@@ -93,8 +102,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             Order = input.Order,
             SubjectId = subjectId
         };
-        _db.Questions.Add(question);
-        await _db.SaveChangesAsync();
+        await _questionRepository.InsertAsync(question, autoSave: true);
         return new QuestionDto
         {
             Id = question.Id,
@@ -109,14 +117,14 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
     public async Task<QuestionDto> UpdateQuestionAsync(long subjectId, long questionId, UpdateQuestionDto input)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
-        var question = await _db.Questions
+        var question = await (await _questionRepository.GetQueryableAsync())
             .Where(q => q.SubjectId == subjectId && q.Id == questionId)
             .FirstOrDefaultAsync();
         if (question == null)
         {
             throw new AbpAuthorizationException("Không tìm thấy câu hỏi hoặc bạn không có quyền truy cập.");
         }
-        if (await _db.Questions.AnyAsync(q => q.SubjectId == subjectId && q.Title == input.Title && q.Id != questionId))
+        if (await _questionRepository.AnyAsync(q => q.SubjectId == subjectId && q.Title == input.Title && q.Id != questionId))
         {
             throw new AbpAuthorizationException("Đã tồn tại câu hỏi với tiêu đề này trong môn học.");
         }
@@ -146,7 +154,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
         question.GeneralExplanation = input.GeneralExplanation.Trim();
         question.DefaultScore = input.DefaultScore;
         question.Order = input.Order;
-        await _db.SaveChangesAsync();
+        await _questionRepository.UpdateAsync(question, autoSave: true);
         return new QuestionDto
         {
             Id = question.Id,
@@ -161,30 +169,27 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
     public async Task<long> DeleteQuestionAsync(long subjectId, long questionId)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
-        var question = await _db.Questions
+        var question = await (await _questionRepository.GetQueryableAsync())
             .Where(q => q.SubjectId == subjectId && q.Id == questionId)
             .FirstOrDefaultAsync();
         if (question == null)
         {
             throw new AbpAuthorizationException("Không tìm thấy câu hỏi hoặc bạn không có quyền truy cập.");
         }
-        _db.Questions.Remove(question);
-        await _db.SaveChangesAsync();
+        await _questionRepository.DeleteAsync(question, autoSave: true);
         return question.Id;
     }
     public async Task<List<AnswerDto>> GetAnswersAsync(long subjectId, long questionId)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
-        var question = await _db.Questions
+        var question = await (await _questionRepository.GetQueryableAsync())
             .Where(q => q.SubjectId == subjectId && q.Id == questionId)
             .FirstOrDefaultAsync();
         if (question == null)
         {
             throw new AbpAuthorizationException("Không tìm thấy câu hỏi hoặc bạn không có quyền truy cập.");
         }
-        var answers = await _db.Answers
-            .Where(a => a.QuestionId == questionId)
-            .ToListAsync();
+        var answers = await _answerRepository.GetListAsync(a => a.QuestionId == questionId);
         return answers.Select(a => new AnswerDto
         {
             Id = a.Id,
@@ -196,7 +201,8 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
     public async Task<AnswerDto> CreateAnswerAsync(long subjectId, long questionId, CreateAnswerDto input)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
-        var question = await _db.Questions.Include(q => q.Answers)
+        var question = await (await _questionRepository.GetQueryableAsync())
+            .Include(q => q.Answers)
             .Where(q => q.SubjectId == subjectId && q.Id == questionId)
             .FirstOrDefaultAsync();
         if (question == null)
@@ -221,8 +227,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             Order = input.Order,
             QuestionId = questionId
         };
-        _db.Answers.Add(answer);
-        await _db.SaveChangesAsync();
+        await _answerRepository.InsertAsync(answer, autoSave: true);
         return new AnswerDto
         {
             Id = answer.Id,
@@ -234,7 +239,8 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
     public async Task<AnswerDto> UpdateAnswerAsync(long subjectId, long questionId, long answerId, UpdateAnswerDto input)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
-        var question = await _db.Questions.Include(q => q.Answers)
+        var question = await (await _questionRepository.GetQueryableAsync())
+            .Include(q => q.Answers)
             .Where(q => q.SubjectId == subjectId && q.Id == questionId)
             .FirstOrDefaultAsync();
         if (question == null)
@@ -260,7 +266,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
         answer.Text = input.Text.Trim();
         answer.IsCorrect = input.IsCorrect;
         answer.Order = input.Order;
-        await _db.SaveChangesAsync();
+        await _answerRepository.UpdateAsync(answer, autoSave: true);
         return new AnswerDto
         {
             Id = answer.Id,
@@ -272,7 +278,8 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
     public async Task<long> DeleteAnswerAsync(long subjectId, long questionId, long answerId)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
-        var question = await _db.Questions.Include(q => q.Answers)
+        var question = await (await _questionRepository.GetQueryableAsync())
+            .Include(q => q.Answers)
             .Where(q => q.SubjectId == subjectId && q.Id == questionId)
             .FirstOrDefaultAsync();
         if (question == null)
@@ -284,8 +291,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
         {
             throw new AbpAuthorizationException("Không tìm thấy đáp án hoặc bạn không có quyền truy cập.");
         }
-        _db.Answers.Remove(answer);
-        await _db.SaveChangesAsync();
+        await _answerRepository.DeleteAsync(answer, autoSave: true);
         return answer.Id;
     }
 }

@@ -3,22 +3,33 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Microsoft.EntityFrameworkCore;
-using LearningBff.Data;
 using LearningBff.Entities;
-using LearningBff.Services.Dtos;
+using LearningBff.Dtos;
 using Volo.Abp;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace LearningBff.Services;
 
 public class ExamAppService : LearningBffAppService
 {
-    private readonly LearningBffDbContext _db;
+    private readonly IRepository<Subject, long> _subjectRepository;
+    private readonly IRepository<Exam, long> _examRepository;
+    private readonly IRepository<ExamResult, long> _examResultRepository;
+    private readonly IRepository<ExamResultAnswer, long> _examResultAnswerRepository;
     private readonly ICurrentUser _currentUser;
 
-    public ExamAppService(LearningBffDbContext db, ICurrentUser currentUser)
+    public ExamAppService(
+        IRepository<Subject, long> subjectRepository,
+        IRepository<Exam, long> examRepository,
+        IRepository<ExamResult, long> examResultRepository,
+        IRepository<ExamResultAnswer, long> examResultAnswerRepository,
+        ICurrentUser currentUser)
     {
-        _db = db;
+        _subjectRepository = subjectRepository;
+        _examRepository = examRepository;
+        _examResultRepository = examResultRepository;
+        _examResultAnswerRepository = examResultAnswerRepository;
         _currentUser = currentUser;
     }
 
@@ -33,11 +44,10 @@ public class ExamAppService : LearningBffAppService
         var userId = _currentUser.Id;
         var now = DateTime.UtcNow;
 
-        var query = _db.Exams.AsNoTracking()
+        var query = (await _examRepository.GetQueryableAsync())
             .Where(e => e.IsPublished
                 && (e.StartTime == null || e.StartTime <= now)
-                && (e.EndTime == null || e.EndTime >= now))
-            .AsQueryable();
+                && (e.EndTime == null || e.EndTime >= now));
 
         if (subjectId.HasValue)
         {
@@ -51,19 +61,19 @@ public class ExamAppService : LearningBffAppService
         if (totalPages > 0 && safePage > totalPages) safePage = totalPages;
 
         var exams = await query
-            .OrderByDescending(e => e.CreationTime)
-            .Skip((safePage - 1) * pageSize)
-            .Take(pageSize)
             .Include(e => e.Subject)
             .Include(e => e.Chapter)
             .Include(e => e.ExamQuestions)
+            .OrderByDescending(e => e.CreationTime)
+            .Skip((safePage - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
         var attemptsDict = new Dictionary<long, int>();
         if (userId.HasValue)
         {
             var pagedIds = exams.Select(e => e.Id).ToList();
-            attemptsDict = await _db.ExamResults.AsNoTracking()
+            attemptsDict = await (await _examResultRepository.GetQueryableAsync())
                 .Where(r => r.UserId == userId.Value && r.Status == ExamResultStatus.Submitted && pagedIds.Contains(r.ExamId))
                 .GroupBy(r => r.ExamId)
                 .Select(g => new { ExamId = g.Key, Count = g.Count() })
@@ -108,7 +118,7 @@ public class ExamAppService : LearningBffAppService
     /// </summary>
     public async Task<List<SubjectFilterDto>> GetPublishedExamSubjectsAsync()
     {
-        return await _db.Subjects.AsNoTracking()
+        return await (await _subjectRepository.GetQueryableAsync())
             .Where(s => s.IsActive && s.Exams.Any(e => e.IsPublished))
             .OrderBy(s => s.Name)
             .Select(s => new SubjectFilterDto
@@ -133,9 +143,8 @@ public class ExamAppService : LearningBffAppService
             return (new List<ExamResultDto>(), 0);
         }
 
-        var query = _db.ExamResults.AsNoTracking()
-            .Where(r => r.UserId == userId.Value && r.Status == ExamResultStatus.Submitted)
-            .AsQueryable();
+        var query = (await _examResultRepository.GetQueryableAsync())
+            .Where(r => r.UserId == userId.Value && r.Status == ExamResultStatus.Submitted);
 
         if (subjectId.HasValue)
         {
@@ -149,12 +158,12 @@ public class ExamAppService : LearningBffAppService
         if (totalPages > 0 && safePage > totalPages) safePage = totalPages;
 
         var list = await query
-            .OrderByDescending(r => r.SubmitTime ?? r.CreationTime)
-            .Skip((safePage - 1) * pageSize)
-            .Take(pageSize)
             .Include(r => r.Exam)
                 .ThenInclude(e => e!.Subject)
             .Include(r => r.ExamResultAnswers)
+            .OrderByDescending(r => r.SubmitTime ?? r.CreationTime)
+            .Skip((safePage - 1) * pageSize)
+            .Take(pageSize)
             .ToListAsync();
 
         var items = list.Select(r => new ExamResultDto
@@ -187,7 +196,7 @@ public class ExamAppService : LearningBffAppService
         var userId = _currentUser.Id
             ?? throw new UserFriendlyException("Bạn cần đăng nhập để làm bài thi.");
 
-        var exam = await _db.Exams.AsNoTracking()
+        var exam = await (await _examRepository.GetQueryableAsync())
             .Include(e => e.ExamQuestions)
             .FirstOrDefaultAsync(e => e.Id == examId)
             ?? throw new UserFriendlyException("Không tìm thấy đề thi.");
@@ -206,22 +215,25 @@ public class ExamAppService : LearningBffAppService
 
         if (exam.MaxAttempts.HasValue)
         {
-            var attempts = await _db.ExamResults.CountAsync(r =>
+            var attempts = await _examResultRepository.CountAsync(r =>
                 r.ExamId == examId && r.UserId == userId && r.Status == ExamResultStatus.Submitted);
             if (attempts >= exam.MaxAttempts.Value)
                 throw new UserFriendlyException($"Bạn đã dùng hết {exam.MaxAttempts.Value} lượt thi cho đề thi này.");
         }
 
         // Hủy bất kỳ phiên thi dở dang trước đó của đề này
-        var inProgress = await _db.ExamResults
-            .Where(r => r.ExamId == examId && r.UserId == userId && r.Status == ExamResultStatus.InProgress)
-            .ToListAsync();
+        var inProgress = await _examResultRepository.GetListAsync(r =>
+            r.ExamId == examId && r.UserId == userId && r.Status == ExamResultStatus.InProgress);
         foreach (var p in inProgress)
         {
             p.Status = ExamResultStatus.Expired;
         }
+        if (inProgress.Any())
+        {
+            await _examResultRepository.UpdateManyAsync(inProgress, autoSave: true);
+        }
 
-        var attemptNumber = await _db.ExamResults
+        var attemptNumber = await _examResultRepository
             .CountAsync(r => r.ExamId == examId && r.UserId == userId) + 1;
 
         var result = new ExamResult(examId, userId, attemptNumber)
@@ -232,8 +244,7 @@ public class ExamAppService : LearningBffAppService
             StartTime = DateTime.UtcNow
         };
 
-        _db.ExamResults.Add(result);
-        await _db.SaveChangesAsync();
+        await _examResultRepository.InsertAsync(result, autoSave: true);
 
         return result.Id;
     }
@@ -246,7 +257,7 @@ public class ExamAppService : LearningBffAppService
         var userId = _currentUser.Id
             ?? throw new UserFriendlyException("Bạn cần đăng nhập để làm bài thi.");
 
-        var result = await _db.ExamResults.AsNoTracking()
+        var result = await (await _examResultRepository.GetQueryableAsync())
             .Include(r => r.Exam)
                 .ThenInclude(e => e!.Subject)
             .Include(r => r.Exam)
@@ -319,7 +330,7 @@ public class ExamAppService : LearningBffAppService
         var userId = _currentUser.Id
             ?? throw new UserFriendlyException("Bạn cần đăng nhập để nộp bài.");
 
-        var result = await _db.ExamResults
+        var result = await (await _examResultRepository.GetQueryableAsync())
             .Include(r => r.Exam)
                 .ThenInclude(e => e!.ExamQuestions)
                     .ThenInclude(eq => eq.Question)
@@ -380,8 +391,11 @@ public class ExamAppService : LearningBffAppService
         result.SubmitTime = DateTime.UtcNow;
         result.Status = ExamResultStatus.Submitted;
 
-        _db.ExamResultAnswers.AddRange(examResultAnswers);
-        await _db.SaveChangesAsync();
+        await _examResultRepository.UpdateAsync(result, autoSave: true);
+        if (examResultAnswers.Any())
+        {
+            await _examResultAnswerRepository.InsertManyAsync(examResultAnswers, autoSave: true);
+        }
 
         return await GetResultAsync(result.Id);
     }
@@ -394,7 +408,7 @@ public class ExamAppService : LearningBffAppService
         var userId = _currentUser.Id
             ?? throw new UserFriendlyException("Bạn cần đăng nhập để xem kết quả.");
 
-        var result = await _db.ExamResults.AsNoTracking()
+        var result = await (await _examResultRepository.GetQueryableAsync())
             .Include(r => r.Exam)
                 .ThenInclude(e => e!.Subject)
             .Include(r => r.Exam)
@@ -457,7 +471,7 @@ public class ExamAppService : LearningBffAppService
             }
             else
             {
-                var usedAttempts = await _db.ExamResults.CountAsync(r =>
+                var usedAttempts = await _examResultRepository.CountAsync(r =>
                     r.ExamId == exam.Id && r.UserId == userId && r.Status == ExamResultStatus.Submitted);
                 canRetake = usedAttempts < exam.MaxAttempts.Value;
             }

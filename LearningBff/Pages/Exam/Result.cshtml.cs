@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
 using Volo.Abp.Users;
 using LearningBff.Services;
-using LearningBff.Services.Dtos;
+using LearningBff.Dtos;
 
 namespace LearningBff.Pages.Exam;
 

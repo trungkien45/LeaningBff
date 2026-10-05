@@ -1,4 +1,4 @@
-﻿namespace LearningBff.Services.Dtos;
+﻿namespace LearningBff.Dtos;
 
 public class ChapterDto
 {

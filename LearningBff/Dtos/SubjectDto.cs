@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Generic;
 
-namespace LearningBff.Services.Dtos;
+namespace LearningBff.Dtos;
 
 public class TeacherSimpleDto
 {

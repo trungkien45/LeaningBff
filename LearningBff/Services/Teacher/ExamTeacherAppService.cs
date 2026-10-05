@@ -1,22 +1,37 @@
-﻿using DocumentFormat.OpenXml.Drawing.Diagrams;
-using LearningBff.Data;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Threading.Tasks;
 using LearningBff.Entities;
-using LearningBff.Services.Dtos;
+using LearningBff.Dtos;
 using Microsoft.EntityFrameworkCore;
 using Volo.Abp;
+using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
 
 namespace LearningBff.Services.Teacher
 {
     public class ExamTeacherAppService : TeacherBaseAppService
     {
-        public ExamTeacherAppService(LearningBffDbContext db, ICurrentUser currentUser) : base(db, currentUser)
+        private readonly IRepository<Exam, long> _examRepository;
+        private readonly IRepository<Question, long> _questionRepository;
+        private readonly IRepository<ExamResult, long> _examResultRepository;
+
+        public ExamTeacherAppService(
+            IRepository<Subject, long> subjectRepository,
+            IRepository<Exam, long> examRepository,
+            IRepository<Question, long> questionRepository,
+            IRepository<ExamResult, long> examResultRepository,
+            ICurrentUser currentUser) : base(subjectRepository, currentUser)
         {
+            _examRepository = examRepository;
+            _questionRepository = questionRepository;
+            _examResultRepository = examResultRepository;
         }
         public async Task<(List<ExamDto> Exams, int TotalCount)> GetExamsOfSubjectAsync(long subjectId, string searchName = "", int page = 1, int pageSize = 9)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var query = _db.Exams.AsNoTracking()
+            var query = (await _examRepository.GetQueryableAsync())
                 .Where(e => e.SubjectId == subjectId && (string.IsNullOrEmpty(searchName) || e.Title.Contains(searchName)))
                 .OrderBy(e => e.CreationTime);
             var totalCount = await query.CountAsync();
@@ -36,7 +51,7 @@ namespace LearningBff.Services.Teacher
         public async Task<ExamSummaryDto> GetExamDetailAsync(long subjectId, long examId)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams.AsNoTracking()
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
@@ -74,7 +89,7 @@ namespace LearningBff.Services.Teacher
             {
                 throw new UserFriendlyException("Tiêu đề đề thi không được để trống.");
             }
-            var exists = await _db.Exams.AnyAsync(e => e.SubjectId == subjectId && e.Title.ToLower() == trimmedTitle.ToLower());
+            var exists = await _examRepository.AnyAsync(e => e.SubjectId == subjectId && e.Title.ToLower() == trimmedTitle.ToLower());
             if (exists)
             {
                 throw new UserFriendlyException($"Đề thi '{trimmedTitle}' đã tồn tại trong môn học này.");
@@ -97,8 +112,7 @@ namespace LearningBff.Services.Teacher
                 EndTime = input.EndTime,
                 MaxAttempts = input.MaxAttempts
             };
-            _db.Exams.Add(exam);
-            await _db.SaveChangesAsync();
+            await _examRepository.InsertAsync(exam, autoSave: true);
             return new ExamDto
             {
                 Id = exam.Id,
@@ -111,7 +125,7 @@ namespace LearningBff.Services.Teacher
         public async Task<ExamDto> UpdateExamAsync(long subjectId, long examId, UpdateExamDto input)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
@@ -123,7 +137,7 @@ namespace LearningBff.Services.Teacher
             {
                 throw new UserFriendlyException("Tiêu đề đề thi không được để trống.");
             }
-            var exists = await _db.Exams.AnyAsync(e => e.SubjectId == subjectId && e.Title.ToLower() == trimmedTitle.ToLower() && e.Id != examId);
+            var exists = await _examRepository.AnyAsync(e => e.SubjectId == subjectId && e.Title.ToLower() == trimmedTitle.ToLower() && e.Id != examId);
             if (exists)
             {
                 throw new UserFriendlyException($"Đề thi '{trimmedTitle}' đã tồn tại trong môn học này.");
@@ -147,7 +161,7 @@ namespace LearningBff.Services.Teacher
             exam.StartTime = input.StartTime;
             exam.EndTime = input.EndTime;
             exam.MaxAttempts = input.MaxAttempts;
-            await _db.SaveChangesAsync();
+            await _examRepository.UpdateAsync(exam, autoSave: true);
             return new ExamDto
             {
                 Id = exam.Id,
@@ -160,7 +174,7 @@ namespace LearningBff.Services.Teacher
         public async Task<ExamDto> PublishExamAsync(long subjectId, long examId)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
@@ -168,7 +182,7 @@ namespace LearningBff.Services.Teacher
                 throw new UserFriendlyException("Không tìm thấy đề thi.");
             }
             exam.IsPublished = true;
-            await _db.SaveChangesAsync();
+            await _examRepository.UpdateAsync(exam, autoSave: true);
             return new ExamDto
             {
                 Id = exam.Id,
@@ -181,7 +195,7 @@ namespace LearningBff.Services.Teacher
         public async Task<ExamDto> UnpublishExamAsync(long subjectId, long examId)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
@@ -189,7 +203,7 @@ namespace LearningBff.Services.Teacher
                 throw new UserFriendlyException("Không tìm thấy đề thi.");
             }
             exam.IsPublished = false;
-            await _db.SaveChangesAsync();
+            await _examRepository.UpdateAsync(exam, autoSave: true);
             return new ExamDto
             {
                 Id = exam.Id,
@@ -202,15 +216,15 @@ namespace LearningBff.Services.Teacher
         public async Task<ExamDto> AddQuestionToExamAsync(long subjectId, long examId, long questionId)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams
-                .Where(e => e.SubjectId == subjectId && e.Id == examId)
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Include(e => e.ExamQuestions)
+                .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
             {
                 throw new UserFriendlyException("Không tìm thấy đề thi.");
             }
-            var question = await _db.Questions
+            var question = await (await _questionRepository.GetQueryableAsync())
                 .Where(q => q.SubjectId == subjectId && q.Id == questionId)
                 .FirstOrDefaultAsync();
             if (question == null)
@@ -222,7 +236,7 @@ namespace LearningBff.Services.Teacher
                 throw new UserFriendlyException("Câu hỏi đã tồn tại trong đề thi.");
             }
             exam.ExamQuestions.Add(new ExamQuestion { QuestionId = questionId });
-            await _db.SaveChangesAsync();
+            await _examRepository.UpdateAsync(exam, autoSave: true);
             return new ExamDto
             {
                 Id = exam.Id,
@@ -235,9 +249,9 @@ namespace LearningBff.Services.Teacher
         public async Task<ExamDto> RemoveQuestionFromExamAsync(long subjectId, long examId, long questionId)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams
-                .Where(e => e.SubjectId == subjectId && e.Id == examId)
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Include(e => e.ExamQuestions)
+                .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
             {
@@ -249,7 +263,7 @@ namespace LearningBff.Services.Teacher
                 throw new UserFriendlyException("Câu hỏi không tồn tại trong đề thi.");
             }
             exam.ExamQuestions.Remove(examQuestion);
-            await _db.SaveChangesAsync();
+            await _examRepository.UpdateAsync(exam, autoSave: true);
             return new ExamDto
             {
                 Id = exam.Id,
@@ -262,11 +276,11 @@ namespace LearningBff.Services.Teacher
         public async Task<ExamDetailDto> GetExamWithQuestionsAsync(long subjectId, long examId)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams.AsNoTracking()
-                .Where(e => e.SubjectId == subjectId && e.Id == examId)
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Include(e => e.ExamQuestions)
                     .ThenInclude(eq => eq.Question)
                         .ThenInclude(q => q.Answers)
+                .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
             {
@@ -303,15 +317,14 @@ namespace LearningBff.Services.Teacher
         public async Task<long> DeleteExamAsync(long subjectId, long examId)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
             {
                 throw new UserFriendlyException("Không tìm thấy đề thi.");
             }
-            _db.Exams.Remove(exam);
-            await _db.SaveChangesAsync();
+            await _examRepository.DeleteAsync(exam, autoSave: true);
             return exam.Id;
         }
         public async Task<(List<ExamResultDto> ExamResults, int TotalCount)> GetExamResultsOfExamAsync(long subjectId, long examId, string searchName = "",
@@ -319,14 +332,14 @@ namespace LearningBff.Services.Teacher
             int pageSize = 9)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams.AsNoTracking()
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
             {
                 throw new UserFriendlyException("Không tìm thấy đề thi.");
             }
-            var query = _db.ExamResults.AsNoTracking()
+            var query = (await _examResultRepository.GetQueryableAsync())
                 .Where(r => r.ExamId == examId && (string.IsNullOrEmpty(searchName) || r.User!.UserName.Contains(searchName) || r.User.Name.Contains(searchName)))
                 .OrderByDescending(r => r.SubmitTime);
             var totalCount = await query.CountAsync();
@@ -351,16 +364,16 @@ namespace LearningBff.Services.Teacher
         public async Task<ExamResultDto> GetExamResultDetailAsync(long subjectId, long examId, long resultId)
         {
             Subject subject = await FindSubjectForTeacherAsync(subjectId);
-            var exam = await _db.Exams.AsNoTracking()
+            var exam = await (await _examRepository.GetQueryableAsync())
                 .Where(e => e.SubjectId == subjectId && e.Id == examId)
                 .FirstOrDefaultAsync();
             if (exam == null)
             {
                 throw new UserFriendlyException("Không tìm thấy đề thi.");
             }
-            var result = await _db.ExamResults.AsNoTracking()
-                .Where(r => r.ExamId == examId && r.Id == resultId)
+            var result = await (await _examResultRepository.GetQueryableAsync())
                 .Include(r => r.User)
+                .Where(r => r.ExamId == examId && r.Id == resultId)
                 .FirstOrDefaultAsync();
             if (result == null)
             {
