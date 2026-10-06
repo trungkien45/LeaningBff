@@ -1,9 +1,6 @@
-name: learningbff-stack
-
 services:
   postgres:
     image: postgres:latest
-    container_name: learningbff-postgres
     environment:
       POSTGRES_DB: LearningBff
       POSTGRES_USER: postgres
@@ -12,8 +9,6 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres-data:/var/lib/postgresql
-    networks:
-      - learningbff-network
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres -d LearningBff"]
       interval: 5s
@@ -22,8 +17,6 @@ services:
     restart: unless-stopped
 
   db-migrator:
-    container_name: learningbff-db-migrator
-    image: learningbff-db-migrator
     build:
       context: .
       dockerfile: Dockerfile
@@ -31,16 +24,12 @@ services:
     command: ["--migrate-database"]
     environment:
       ConnectionStrings__Default: "Host=postgres;Port=5432;Database=LearningBff;Username=postgres;Password=postgres"
-    networks:
-      - learningbff-network
     depends_on:
       postgres:
         condition: service_healthy
     restart: "no"
 
   web:
-    container_name: learningbff-web
-    image: learningbff-web
     build:
       context: .
       dockerfile: Dockerfile
@@ -52,14 +41,7 @@ services:
       AuthServer__Authority: http://localhost:8080
     ports:
       - "8080:8080"
-    networks:
-      - learningbff-network
     depends_on:
       db-migrator:
         condition: service_completed_successfully
     restart: unless-stopped
-
-networks:
-  learningbff-network:
-    name: learningbff-network
-    driver: bridge
