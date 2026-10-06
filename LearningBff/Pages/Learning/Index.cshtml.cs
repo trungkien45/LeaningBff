@@ -7,6 +7,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
 using Volo.Abp.Users;
 using LearningBff.Services;
 using LearningBff.Dtos;
+using LearningBff.Entities;
 
 namespace LearningBff.Pages.Learning;
 
@@ -30,16 +31,28 @@ public class IndexModel : AbpPageModel
     public int TotalCount { get; set; }
     public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 1;
 
-    public async Task<IActionResult> OnGetAsync(int page = 1)
+    public string? Search { get; set; }
+    public CourseFilter Filter { get; set; } = CourseFilter.All;
+
+    public async Task<IActionResult> OnGetAsync(
+        int page = 1,
+        CourseFilter? filter = null,
+        string? search = null)
     {
         if (!IsAuthenticated)
         {
             return Redirect("/Account/Login");
         }
 
+        Search = search;
+        Filter = filter ?? CourseFilter.All;
         CurrentPage = Math.Max(1, page);
 
-        var (items, total) = await _learningAppService.GetMyCoursesAsync(CurrentPage, PageSize);
+        var (items, total) = await _learningAppService.GetMyCoursesAsync(
+            string.IsNullOrWhiteSpace(search) ? null : search,
+            CurrentPage,
+            PageSize,
+            Filter);
         MyCourses = items;
         TotalCount = total;
 
@@ -56,19 +69,19 @@ public class IndexModel : AbpPageModel
         try
         {
             // Lấy info môn học để kiểm tra tiến độ (dùng page 1 tìm trong tất cả)
-            var (allCourses, _) = await _learningAppService.GetMyCoursesAsync(1, int.MaxValue);
+            var (allCourses, _) = await _learningAppService.GetMyCoursesAsync(null, 1, int.MaxValue, CourseFilter.All);
             var course = allCourses.FirstOrDefault(c => c.Id == subjectId);
 
             if (course == null)
             {
                 TempData["Error"] = "Không tìm thấy môn học đã đăng ký.";
-                return RedirectToPage("./Index");
+                return RedirectToPage("./Index", new { filter = Filter, search = Search });
             }
 
             if (course.CompletedLessons > 0)
             {
                 TempData["Error"] = $"Không thể hủy đăng ký '{course.Name}' vì bạn đã hoàn thành {course.CompletedLessons} bài học.";
-                return RedirectToPage("./Index");
+                return RedirectToPage("./Index", new { filter = Filter, search = Search });
             }
 
             await _learningAppService.UnregisterSubjectAsync(subjectId);
@@ -79,6 +92,6 @@ public class IndexModel : AbpPageModel
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToPage("./Index");
+        return RedirectToPage("./Index", new { filter = Filter, search = Search });
     }
 }

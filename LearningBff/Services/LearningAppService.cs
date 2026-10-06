@@ -55,7 +55,7 @@ public class LearningAppService : LearningBffAppService
         }
 
         var enrollQuery = (await _enrollmentSubjectRepository.GetQueryableAsync())
-            .Where(e => e.UserId == userId.Value && e.IsActive && (search == null || e.Subject!.Name.Contains(search)));
+            .Where(e => e.UserId == userId.Value && e.IsActive && (search == null || e.Subject!.Name.Contains(search) || e.Subject!.Description!.Contains(search)));
 
         // Filter theo tiến độ học
         if (filter == CourseFilter.Completed)

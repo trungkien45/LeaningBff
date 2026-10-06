@@ -1,8 +1,12 @@
 @page
 @model LearningBff.Pages.Learning.IndexModel
+@using LearningBff.Entities
 @inject Microsoft.AspNetCore.Antiforgery.IAntiforgery Antiforgery
 @{
     ViewData["Title"] = "Không gian Học trực tuyến";
+    var searchSuffix = string.IsNullOrEmpty(Model.Search)
+        ? ""
+        : $"&amp;search={Uri.EscapeDataString(Model.Search)}";
 }
 
 <style>
@@ -142,6 +146,41 @@
         margin-bottom: 0.75rem;
     }
 
+    /* Filter pills */
+    .filter-pills {
+        display: inline-flex;
+        gap: 0.35rem;
+        background: #ffffff;
+        border: 1px solid var(--learn-border);
+        border-radius: 9999px;
+        padding: 0.3rem;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+    }
+    .filter-pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.4rem;
+        padding: 0.45rem 1.1rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        font-size: 0.875rem;
+        color: var(--learn-text-muted);
+        text-decoration: none;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .filter-pill:hover {
+        background: #eef2ff;
+        color: var(--learn-primary);
+        text-decoration: none;
+    }
+    .filter-pill.active {
+        background: linear-gradient(135deg, #4338ca 0%, #6366f1 100%);
+        color: #ffffff;
+        box-shadow: 0 4px 10px rgba(79, 70, 229, 0.3);
+    }
+    .filter-pill.active:hover { color: #ffffff; }
+
     /* Toast */
     .toast-container-custom {
         position: fixed;
@@ -274,32 +313,85 @@
                 </a>
             </div>
         </div>
+
+        <form method="get" class="d-flex gap-2 mt-4" style="max-width: 550px;">
+            <input type="hidden" name="filter" value="@Model.Filter" />
+            <div class="input-group">
+                <span class="input-group-text bg-white border-0"><i class="fas fa-search text-muted"></i></span>
+                <input type="text" name="search" value="@Model.Search" class="form-control border-0 py-2"
+                       placeholder="Tìm kiếm tên môn học..." />
+                @if (!string.IsNullOrEmpty(Model.Search))
+                {
+                    <a href="/Learning?filter=@Model.Filter" class="btn btn-light border-0"><i class="fas fa-times"></i></a>
+                }
+            </div>
+            <button type="submit" class="btn btn-light px-4 fw-bold text-primary">Tìm</button>
+        </form>
+    </div>
+
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+        <h2 class="h4 fw-bold mb-0">
+            <i class="fas fa-chalkboard-teacher text-primary me-2"></i>
+            @(Model.Filter == CourseFilter.All ? "Môn học của bạn" :
+                Model.Filter == CourseFilter.Completed ? "Môn học đã hoàn thành" : "Môn học chưa hoàn thành")
+        </h2>
+        <div class="filter-pills">
+            <a href="/Learning?filter=@CourseFilter.All@searchSuffix" class="filter-pill @(Model.Filter == CourseFilter.All ? "active" : "")">
+                <i class="fas fa-list"></i> Tất cả
+            </a>
+            <a href="/Learning?filter=@CourseFilter.Completed@searchSuffix" class="filter-pill @(Model.Filter == CourseFilter.Completed ? "active" : "")">
+                <i class="fas fa-check-circle"></i> Đã hoàn thành
+            </a>
+            <a href="/Learning?filter=@CourseFilter.Incomplete@searchSuffix" class="filter-pill @(Model.Filter == CourseFilter.Incomplete ? "active" : "")">
+                <i class="fas fa-spinner"></i> Chưa hoàn thành
+            </a>
+        </div>
     </div>
 
     @if (!Model.MyCourses.Any())
     {
         <div class="card p-5 text-center border-0 shadow-sm rounded-4 my-4">
-            <div class="mb-3">
-                <i class="fas fa-book-reader fa-4x text-muted opacity-50"></i>
-            </div>
-            <h3 class="fw-bold mb-2">Bạn chưa đăng ký môn học nào</h3>
-            <p class="text-muted mx-auto mb-4" style="max-width: 500px;">
-                Hãy khám phá danh mục các môn học trực tuyến phong phú, chọn môn học phù hợp và bắt đầu hành trình nâng cao năng lực ngay hôm nay.
-            </p>
-            <div>
-                <a href="/Subjects" class="btn btn-primary btn-lg px-5 shadow-sm fw-bold">
-                    <i class="fas fa-compass me-2"></i> Khám phá môn học ngay
-                </a>
-            </div>
+            @if (Model.Filter != CourseFilter.All)
+            {
+                <div class="mb-3">
+                    <i class="fas fa-filter fa-4x text-muted opacity-50"></i>
+                </div>
+                <h3 class="fw-bold mb-2">Không có môn học nào khớp bộ lọc</h3>
+                <p class="text-muted mx-auto mb-4" style="max-width: 500px;">
+                    @if (Model.Filter == CourseFilter.Completed)
+                    {
+                        <span>Bạn chưa hoàn thành bất kỳ môn học nào. Hãy tiếp tục học để tiến độ được ghi nhận.</span>
+                    }
+                    else
+                    {
+                        <span>Chúc mừng! Bạn đã hoàn thành tất cả các môn học đang theo dõi.</span>
+                    }
+                </p>
+                <div>
+                    <a href="/Learning?filter=@CourseFilter.All@searchSuffix" class="btn btn-outline-primary btn-lg px-5 fw-bold">
+                        <i class="fas fa-list me-2"></i> Xem tất cả môn học
+                    </a>
+                </div>
+            }
+            else
+            {
+                <div class="mb-3">
+                    <i class="fas fa-book-reader fa-4x text-muted opacity-50"></i>
+                </div>
+                <h3 class="fw-bold mb-2">Bạn chưa đăng ký môn học nào</h3>
+                <p class="text-muted mx-auto mb-4" style="max-width: 500px;">
+                    Hãy khám phá danh mục các môn học trực tuyến phong phú, chọn môn học phù hợp và bắt đầu hành trình nâng cao năng lực ngay hôm nay.
+                </p>
+                <div>
+                    <a href="/Subjects" class="btn btn-primary btn-lg px-5 shadow-sm fw-bold">
+                        <i class="fas fa-compass me-2"></i> Khám phá môn học ngay
+                    </a>
+                </div>
+            }
         </div>
     }
     else
     {
-        <div class="d-flex align-items-center justify-content-between mb-4">
-            <h2 class="h4 fw-bold mb-0"><i class="fas fa-chalkboard-teacher text-primary me-2"></i> Môn học của bạn</h2>
-            <span class="text-muted small">@Model.TotalCount môn học</span>
-        </div>
-
         <div class="row g-4">
             @foreach (var course in Model.MyCourses)
             {
@@ -371,14 +463,14 @@
         @if (Model.TotalPages > 1)
         {
             <div class="pager">
-                <a href="/Learning?page=@(Model.CurrentPage - 1)" class="pager-btn @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                <a href="/Learning?page=@(Model.CurrentPage - 1)&filter=@Model.Filter@searchSuffix" class="pager-btn @(Model.CurrentPage <= 1 ? "disabled" : "")">
                     <i class="fas fa-chevron-left"></i> Trước
                 </a>
                 <span class="pager-info">
                     Trang <strong>@Model.CurrentPage</strong> / <strong>@Model.TotalPages</strong>
                     &nbsp;·&nbsp; @Model.TotalCount môn học
                 </span>
-                <a href="/Learning?page=@(Model.CurrentPage + 1)" class="pager-btn @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                <a href="/Learning?page=@(Model.CurrentPage + 1)&filter=@Model.Filter@searchSuffix" class="pager-btn @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
                     Tiếp <i class="fas fa-chevron-right"></i>
                 </a>
             </div>

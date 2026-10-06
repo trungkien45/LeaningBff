@@ -7,6 +7,7 @@ using Volo.Abp.AspNetCore.Mvc.UI.RazorPages;
 using Volo.Abp.Users;
 using LearningBff.Services;
 using LearningBff.Dtos;
+using LearningBff.Entities;
 using Microsoft.AspNetCore.Authorization;
 
 namespace LearningBff.Pages.Subjects;
@@ -25,6 +26,7 @@ public class IndexModel : AbpPageModel
 
     public List<SubjectCardDto> Subjects { get; set; } = new();
     public string? Search { get; set; }
+    public CourseEnrollmentFilter Filter { get; set; } = CourseEnrollmentFilter.All;
     public bool IsAuthenticated => _currentUser.IsAuthenticated;
 
     // Pagination
@@ -34,18 +36,16 @@ public class IndexModel : AbpPageModel
     public int TotalPages => PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 1;
     public int EnrolledCount { get; set; }
 
-    public async Task<IActionResult> OnGetAsync(string? search = null, int page = 1)
+    public async Task<IActionResult> OnGetAsync(string? search = null, int page = 1, CourseEnrollmentFilter? filter = null)
     {
         Search = search;
+        Filter = filter ?? CourseEnrollmentFilter.All;
         CurrentPage = Math.Max(1, page);
 
-        var (items, total) = await _learningAppService.GetAllCoursesAsync(search, CurrentPage, PageSize);
+        var (items, total) = await _learningAppService.GetAllCoursesAsync(search, CurrentPage, PageSize, Filter);
         Subjects = items;
         TotalCount = total;
 
-        // Enrolled count: cần lấy tổng toàn bộ (không phải chỉ trang hiện tại)
-        // -> lấy từ items đang có + query riêng nếu muốn chính xác.
-        // Đơn giản: đếm từ items hiện tại + tổng enrolled (dùng 1 query nhẹ)
         EnrolledCount = items.Count(s => s.IsEnrolled);
 
         return Page();
@@ -68,7 +68,7 @@ public class IndexModel : AbpPageModel
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToPage("./Index", new { search = Search });
+        return RedirectToPage("./Index", new { search = Search, filter = Filter });
     }
 
     public async Task<IActionResult> OnPostUnregisterAsync(long subjectId)
@@ -88,6 +88,6 @@ public class IndexModel : AbpPageModel
             TempData["Error"] = ex.Message;
         }
 
-        return RedirectToPage("./Index", new { search = Search });
+        return RedirectToPage("./Index", new { search = Search, filter = Filter });
     }
 }
