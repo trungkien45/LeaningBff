@@ -92,7 +92,18 @@
     font-weight: 600; transition: all .2s; text-decoration: none;
     text-align: center;
 }
-
+.btn-outline-info {
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-color: #fff;
+}
+.btn-outline-primary {
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-color: #fff;
+}
+.btn-outline-success {
+    --bs-btn-hover-color: #fff;
+    --bs-btn-active-color: #fff;
+}
 button[name="Action"][value="Login"],
 #loginForm button[type="submit"],
 .abp-account-layout button[type="submit"] {

@@ -85,9 +85,7 @@ public class IndexModel : AbpPageModel
 
         // 3. Thống kê Giáo viên (Teachers)
         var teacherUsers = await _userManager.GetUsersInRoleAsync("teacher");
-        var adminUsers = await _userManager.GetUsersInRoleAsync("admin");
-        var distinctTeachers = teacherUsers.Concat(adminUsers).DistinctBy(u => u.Id).ToList();
-        TotalTeachers = distinctTeachers.Count;
+        TotalTeachers = teacherUsers.Count;
 
         // 4. Thống kê Đề thi, Câu hỏi, Lượt nộp
         TotalRoles = await _db.Roles.CountAsync();
