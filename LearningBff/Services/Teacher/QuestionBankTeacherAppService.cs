@@ -27,6 +27,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
         var query = (await _questionRepository.GetQueryableAsync())
+            .Include(q => q.Answers)
             .Where(q => q.SubjectId == subjectId && (string.IsNullOrEmpty(searchName) || q.Title.Contains(searchName)))
             .OrderBy(q => q.CreationTime);
         var totalCount = await query.CountAsync();
@@ -43,6 +44,13 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             GeneralExplanation = q.GeneralExplanation,
             DefaultScore = q.DefaultScore,
             Order = q.Order,
+            Answers = q.Answers.OrderBy(a => a.Order).Select(a => new AnswerDto
+            {
+                Id = a.Id,
+                Text = a.Text,
+                IsCorrect = a.IsCorrect,
+                Order = a.Order
+            }).ToList()
         }).ToList(), totalCount);
     }
     public async Task<QuestionDto> GetQuestionDetailAsync(long subjectId, long questionId)
@@ -103,6 +111,20 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             SubjectId = subjectId
         };
         await _questionRepository.InsertAsync(question, autoSave: true);
+
+        // Insert answers
+        var answerOrder = 0;
+        foreach (var a in input.Answers.Where(a => !string.IsNullOrWhiteSpace(a.Text)))
+        {
+            await _answerRepository.InsertAsync(new Answer
+            {
+                QuestionId = question.Id,
+                Text = a.Text!.Trim(),
+                IsCorrect = a.IsCorrect,
+                Order = answerOrder++
+            }, autoSave: true);
+        }
+
         return new QuestionDto
         {
             Id = question.Id,
@@ -155,6 +177,23 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
         question.DefaultScore = input.DefaultScore;
         question.Order = input.Order;
         await _questionRepository.UpdateAsync(question, autoSave: true);
+
+        // Replace answers: delete old, insert new
+        var existingAnswers = await _answerRepository.GetListAsync(a => a.QuestionId == questionId);
+        foreach (var old in existingAnswers)
+            await _answerRepository.DeleteAsync(old, autoSave: true);
+        var answerOrder = 0;
+        foreach (var a in input.Answers.Where(a => !string.IsNullOrWhiteSpace(a.Text)))
+        {
+            await _answerRepository.InsertAsync(new Answer
+            {
+                QuestionId = questionId,
+                Text = a.Text!.Trim(),
+                IsCorrect = a.IsCorrect,
+                Order = answerOrder++
+            }, autoSave: true);
+        }
+
         return new QuestionDto
         {
             Id = question.Id,

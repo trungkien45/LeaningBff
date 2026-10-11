@@ -93,6 +93,13 @@ public class LearningBffMenuContributor : IMenuContributor
             ));
 
             teacherMenu.AddItem(new ApplicationMenuItem(
+                "Teacher.Curriculum",
+                "Nội dung & Bài học",
+                "~/Teacher/Curriculum",
+                icon: "fas fa-book-open"
+            ));
+
+            teacherMenu.AddItem(new ApplicationMenuItem(
                 "Teacher.Questions",
                 "Câu hỏi",
                 "~/Teacher/Questions",

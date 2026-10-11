@@ -1,0 +1,815 @@
+@page "/Teacher/Curriculum"
+@model LearningBff.Pages.Teacher.CurriculumModel
+@{
+    ViewData["Title"] = "Nội dung & Giáo trình Môn học - Giảng viên";
+}
+
+<!-- Select2 CSS -->
+<link rel="stylesheet" href="~/libs/select2/css/select2.min.css" />
+
+<style>
+    :root {
+        --teach-primary: #6366f1;
+        --teach-primary-dark: #4338ca;
+        --teach-accent: #0ea5e9;
+        --teach-bg: #f8fafc;
+        --teach-card-bg: #ffffff;
+        --teach-border: #e2e8f0;
+        --teach-text: #0f172a;
+        --teach-muted: #64748b;
+        --teach-success: #10b981;
+        --teach-warning: #f59e0b;
+        --teach-danger: #ef4444;
+    }
+
+    .teacher-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem 1rem;
+    }
+
+    /* Hero Banner */
+    .teacher-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+        border-radius: 1.25rem;
+        padding: 2rem;
+        color: #ffffff;
+        margin-bottom: 1.75rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 25px -5px rgba(30, 27, 75, 0.3);
+    }
+    .teacher-hero::after {
+        content: '';
+        position: absolute;
+        top: -40%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0) 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .teacher-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(99, 102, 241, 0.25);
+        border: 1px solid rgba(165, 180, 252, 0.3);
+        color: #c7d2fe;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        margin-bottom: 0.75rem;
+    }
+    .teacher-hero-title {
+        font-size: 1.85rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-bottom: 0.5rem;
+    }
+    .teacher-hero-subtitle {
+        color: #cbd5e1;
+        font-size: 0.95rem;
+        max-width: 750px;
+        margin-bottom: 1.25rem;
+        line-height: 1.5;
+    }
+
+    /* Select2 Section */
+    .subject-selector-card {
+        background: #ffffff;
+        border: 1px solid var(--teach-border);
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.75rem;
+        box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05);
+    }
+    .select2-container--default .select2-selection--single {
+        height: 44px;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 0.65rem;
+        display: flex;
+        align-items: center;
+        padding: 0 0.5rem;
+    }
+    .select2-container--default .select2-selection--single:focus,
+    .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: var(--teach-primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #1e293b;
+        font-weight: 600;
+        font-size: 0.95rem;
+        line-height: 42px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 42px;
+        right: 10px;
+    }
+
+    /* Content Card */
+    .teach-card {
+        background: var(--teach-card-bg);
+        border: 1px solid var(--teach-border);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    /* Chapter Card Styles */
+    .chapter-card {
+        background: #ffffff;
+        border: 1.5px solid #e2e8f0;
+        border-radius: 0.85rem;
+        margin-bottom: 1.5rem;
+        overflow: hidden;
+        transition: all 0.2s ease;
+    }
+    .chapter-card:hover {
+        border-color: #cbd5e1;
+        box-shadow: 0 6px 16px -2px rgba(0, 0, 0, 0.05);
+    }
+    .chapter-header {
+        background: #f8fafc;
+        padding: 1rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        border-bottom: 1px solid #edf2f7;
+    }
+    .chapter-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin-bottom: 0.25rem;
+    }
+    .chapter-desc {
+        color: #64748b;
+        font-size: 0.85rem;
+        margin-bottom: 0;
+    }
+
+    /* Lesson List Items */
+    .lesson-item {
+        padding: 0.85rem 1.25rem;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        transition: background-color 0.15s ease;
+    }
+    .lesson-item:last-child {
+        border-bottom: none;
+    }
+    .lesson-item:hover {
+        background-color: #f8fafc;
+    }
+    .lesson-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 0.5rem;
+        background: #e0e7ff;
+        color: #4338ca;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.85rem;
+        flex-shrink: 0;
+    }
+    .lesson-title {
+        font-size: 0.95rem;
+        font-weight: 600;
+        color: #1e293b;
+    }
+
+    /* Modals */
+    .custom-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+        padding: 1rem;
+    }
+    .custom-modal-overlay.active {
+        display: flex;
+    }
+    .custom-modal-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        max-width: 650px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .custom-modal-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .custom-modal-body {
+        padding: 1.5rem;
+    }
+    .custom-modal-footer {
+        padding: 1rem 1.5rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+</style>
+
+<div class="teacher-container">
+    <!-- Hero Banner -->
+    <div class="teacher-hero">
+        <div class="teacher-hero-badge">
+            <i class="fas fa-book-open"></i>
+            <span>Giáo trình & Nội dung</span>
+        </div>
+        <h1 class="teacher-hero-title">Nội dung Môn học</h1>
+        <p class="teacher-hero-subtitle">
+            Quản lý cấu trúc đề cương môn học bao gồm các <strong>Chương học</strong> và <strong>Bài giảng chi tiết</strong>. Bạn có thể thêm, sửa nội dung bài học bất kỳ lúc nào để học viên tiếp thu kiến thức tốt nhất.
+        </p>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="~/Teacher/Subjects" class="btn btn-sm btn-outline-light">
+                <i class="fas fa-arrow-left me-1"></i> Danh sách Môn học
+            </a>
+            @if (Model.SubjectId.HasValue)
+            {
+                <a href="~/Teacher/Questions?subjectId=@Model.SubjectId" class="btn btn-sm btn-light fw-semibold text-primary">
+                    <i class="fas fa-database me-1"></i> Ngân hàng câu hỏi
+                </a>
+                <a href="~/Teacher/Exams?subjectId=@Model.SubjectId" class="btn btn-sm btn-light fw-semibold text-purple" style="color: #6d28d9;">
+                    <i class="fas fa-file-signature me-1"></i> Đề thi môn này
+                </a>
+                <a href="~/Learning?subjectId=@Model.SubjectId" class="btn btn-sm btn-outline-light">
+                    <i class="fas fa-chalkboard-teacher me-1"></i> Xem giao diện học viên
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert">
+            <i class="fas fa-check-circle fs-5"></i>
+            <div>@Model.SuccessMessage</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert">
+            <i class="fas fa-exclamation-triangle fs-5"></i>
+            <div>@Model.ErrorMessage</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Select2 Subject Selector -->
+    <div class="subject-selector-card">
+        <div class="row align-items-center g-3">
+            <div class="col-md-3">
+                <label for="subjectSelect" class="form-label fw-bold text-dark mb-0">
+                    <i class="fas fa-book text-primary me-1"></i> Chọn Môn học:
+                </label>
+                <div class="text-muted small">Tìm kiếm và chọn môn để xem đề cương</div>
+            </div>
+            <div class="col-md-9">
+                <select id="subjectSelect" class="form-select" style="width: 100%;">
+                    @if (Model.CurrentSubject != null)
+                    {
+                        <option value="@Model.CurrentSubject.Id" selected="selected">@Model.CurrentSubject.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.CurrentSubject == null)
+    {
+        <!-- Empty State: Chưa chọn môn học -->
+        <div class="teach-card text-center py-5">
+            <div style="font-size: 3.5rem; color: #cbd5e1; margin-bottom: 1rem;">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <h4 class="fw-bold text-secondary">Vui lòng chọn môn học</h4>
+            <p class="text-muted small mx-auto mb-4" style="max-width: 500px;">
+                Dùng hộp chọn Select2 phía trên để xem nội dung, danh sách chương học và bài giảng của môn học tương ứng.
+            </p>
+            <a href="~/Teacher/Subjects" class="btn btn-outline-primary">
+                <i class="fas fa-list me-1"></i> Xem danh sách môn học của tôi
+            </a>
+        </div>
+    }
+    else
+    {
+        <!-- Main Panel for Selected Subject -->
+        <div class="teach-card">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-4 border-bottom">
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h2 class="h5 fw-bold mb-0 text-dark">
+                            <i class="fas fa-folder-open text-warning me-1"></i> @Model.CurrentSubject.Name
+                        </h2>
+                        <span class="badge bg-primary rounded-pill">@Model.Chapters.Count chương</span>
+                        <span class="badge bg-info rounded-pill">@Model.TotalLessons bài học</span>
+                        @if (Model.CurrentSubject.IsActive)
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success">
+                                <i class="fas fa-unlock me-1"></i> Đang mở đăng ký
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger-subtle text-danger border border-danger">
+                                <i class="fas fa-lock me-1"></i> Đã khóa đăng ký
+                            </span>
+                        }
+                    </div>
+                    <div class="text-muted small mt-1">
+                        @(string.IsNullOrWhiteSpace(Model.CurrentSubject.Description) ? "Môn học phụ trách bởi bạn" : Model.CurrentSubject.Description)
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary fw-semibold" onclick="openCreateChapterModal()">
+                        <i class="fas fa-plus me-1"></i> Thêm chương mới
+                    </button>
+                    <a href="~/Teacher/Questions?subjectId=@Model.CurrentSubject.Id" class="btn btn-outline-primary btn-sm d-flex align-items-center">
+                        <i class="fas fa-database me-1"></i> Câu hỏi
+                    </a>
+                    <a href="~/Teacher/Exams?subjectId=@Model.CurrentSubject.Id" class="btn btn-outline-purple btn-sm d-flex align-items-center" style="color: #6d28d9; border-color: #ddd6fe;">
+                        <i class="fas fa-file-signature me-1"></i> Đề thi
+                    </a>
+                </div>
+            </div>
+
+            @if (!Model.Chapters.Any())
+            {
+                <div class="text-center py-5 bg-light rounded-3">
+                    <i class="fas fa-layer-group fa-3x text-muted mb-2" style="opacity: 0.4;"></i>
+                    <h6 class="fw-bold text-secondary">Môn học này chưa có chương học nào</h6>
+                    <p class="text-muted small mb-3">Bắt đầu xây dựng đề cương môn học bằng cách thêm chương học đầu tiên.</p>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openCreateChapterModal()">
+                        <i class="fas fa-plus me-1"></i> Tạo chương học ngay
+                    </button>
+                </div>
+            }
+            else
+            {
+                <!-- Chapters & Lessons List -->
+                @for (int i = 0; i < Model.Chapters.Count; i++)
+                {
+                    var ch = Model.Chapters[i];
+                    <div class="chapter-card">
+                        <!-- Chapter Header -->
+                        <div class="chapter-header">
+                            <div>
+                                <div class="d-flex align-items-center gap-2">
+                                    <span class="badge bg-primary">Chương @(i + 1)</span>
+                                    <h3 class="chapter-title mb-0">@ch.Name</h3>
+                                    <span class="badge bg-light text-secondary border small">@ch.Lessons.Count bài học</span>
+                                </div>
+                                @if (!string.IsNullOrWhiteSpace(ch.Description))
+                                {
+                                    <p class="chapter-desc mt-1">@ch.Description</p>
+                                }
+                            </div>
+
+                            <div class="d-flex align-items-center gap-2">
+                                <button type="button" class="btn btn-sm btn-success fw-semibold"
+                                        onclick="openCreateLessonModal(@ch.Id, '@Html.Raw(Html.Encode(ch.Name))')"
+                                        title="Thêm bài học vào chương này">
+                                    <i class="fas fa-plus me-1"></i> Thêm bài học
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-primary"
+                                        onclick="openEditChapterModal(@ch.Id, '@Html.Raw(Html.Encode(ch.Name))', '@Html.Raw(Html.Encode(ch.Description))')"
+                                        title="Sửa tên hoặc mô tả chương">
+                                    <i class="fas fa-edit"></i>
+                                </button>
+                                <button type="button" class="btn btn-sm btn-outline-danger"
+                                        onclick="openDeleteChapterModal(@ch.Id, '@Html.Raw(Html.Encode(ch.Name))')"
+                                        title="Xóa chương học">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Lessons in Chapter -->
+                        <div class="chapter-body">
+                            @if (!ch.Lessons.Any())
+                            {
+                                <div class="p-3 text-center text-muted small bg-white">
+                                    <i class="fas fa-info-circle me-1"></i> Chương này chưa có bài học nào. Bấm <strong>"Thêm bài học"</strong> ở trên để tạo bài giảng mới.
+                                </div>
+                            }
+                            else
+                            {
+                                @for (int j = 0; j < ch.Lessons.Count; j++)
+                                {
+                                    var l = ch.Lessons[j];
+                                    <div class="lesson-item">
+                                        <div class="d-flex align-items-center gap-3">
+                                            <div class="lesson-icon">
+                                                <i class="fas fa-play"></i>
+                                            </div>
+                                            <div>
+                                                <div class="lesson-title">Bài @(j + 1): @l.Title</div>
+                                                <div class="text-muted small" style="font-size: 0.75rem;">
+                                                    <i class="far fa-calendar-alt me-1"></i> Tạo ngày: @l.CreationTime.ToLocalTime().ToString("dd/MM/yyyy HH:mm")
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-info"
+                                                    onclick="openViewLessonModal(@l.Id, '@Html.Raw(Html.Encode(l.Title))')"
+                                                    title="Xem trước nội dung bài học">
+                                                <i class="fas fa-eye me-1"></i> Xem nội dung
+                                            </button>
+                                            <button type="button" class="btn btn-outline-primary"
+                                                    onclick="openEditLessonModal(@l.Id)"
+                                                    title="Sửa bài học">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger"
+                                                    onclick="openDeleteLessonModal(@l.Id, '@Html.Raw(Html.Encode(l.Title))')"
+                                                    title="Xóa bài học">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                }
+                            }
+                        </div>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@if (Model.CurrentSubject != null)
+{
+    <!-- Modal: Tạo Chương mới -->
+    <div class="custom-modal-overlay" id="createChapterModal">
+        <div class="custom-modal-card">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="fas fa-folder-plus text-primary me-2"></i> Thêm chương mới
+                </h5>
+                <button type="button" class="btn-close" onclick="closeModal('createChapterModal')"></button>
+            </div>
+            <form method="post" asp-page-handler="CreateChapter">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+
+                <div class="custom-modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên chương học <span class="text-danger">*</span></label>
+                        <input type="text" name="name" class="form-control" placeholder="Ví dụ: Chương 1: Tổng quan và cài đặt..." required />
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Mô tả tóm tắt chương</label>
+                        <textarea name="description" class="form-control" rows="3" placeholder="Mô tả mục tiêu kiến thức của chương..."></textarea>
+                    </div>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createChapterModal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="fas fa-save me-1"></i> Lưu chương
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Sửa Chương -->
+    <div class="custom-modal-overlay" id="editChapterModal">
+        <div class="custom-modal-card">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="fas fa-edit text-primary me-2"></i> Chỉnh sửa chương học
+                </h5>
+                <button type="button" class="btn-close" onclick="closeModal('editChapterModal')"></button>
+            </div>
+            <form method="post" asp-page-handler="UpdateChapter">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+                <input type="hidden" name="chapterId" id="editChapterId" />
+
+                <div class="custom-modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tên chương học <span class="text-danger">*</span></label>
+                        <input type="text" name="name" id="editChapterName" class="form-control" required />
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Mô tả tóm tắt chương</label>
+                        <textarea name="description" id="editChapterDesc" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editChapterModal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="fas fa-check me-1"></i> Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Xóa Chương -->
+    <div class="custom-modal-overlay" id="deleteChapterModal">
+        <div class="custom-modal-card" style="max-width: 480px;">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Xác nhận xóa chương học
+                </h5>
+                <button type="button" class="btn-close" onclick="closeModal('deleteChapterModal')"></button>
+            </div>
+            <form method="post" asp-page-handler="DeleteChapter">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+                <input type="hidden" name="chapterId" id="deleteChapterId" />
+
+                <div class="custom-modal-body">
+                    <p>Bạn có chắc chắn muốn xóa chương học này không?</p>
+                    <blockquote class="border-start border-3 border-danger ps-3 py-1 bg-light small mb-3" id="deleteChapterName"></blockquote>
+                    <p class="text-muted small mb-0">Tất cả các bài học thuộc chương này cũng sẽ bị xóa vĩnh viễn.</p>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('deleteChapterModal')">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-danger fw-semibold">
+                        <i class="fas fa-trash-alt me-1"></i> Xóa chương
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Tạo Bài học mới -->
+    <div class="custom-modal-overlay" id="createLessonModal">
+        <div class="custom-modal-card" style="max-width: 750px;">
+            <div class="custom-modal-header">
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="fas fa-file-circle-plus text-success me-2"></i> Thêm bài học mới
+                    </h5>
+                    <div class="text-muted small mt-1" id="createLessonChapterTitle"></div>
+                </div>
+                <button type="button" class="btn-close" onclick="closeModal('createLessonModal')"></button>
+            </div>
+            <form method="post" asp-page-handler="CreateLesson">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+                <input type="hidden" name="chapterId" id="createLessonChapterId" />
+
+                <div class="custom-modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tiêu đề bài học <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="Ví dụ: Bài 1: Cài đặt Visual Studio và .NET SDK..." required />
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Nội dung bài học (Giáo trình, tài liệu, hướng dẫn)</label>
+                        <textarea name="content" class="form-control" rows="8" placeholder="Nhập nội dung bài giảng, mã nguồn mẫu, hướng dẫn học viên..."></textarea>
+                    </div>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createLessonModal')">Hủy</button>
+                    <button type="submit" class="btn btn-success fw-semibold">
+                        <i class="fas fa-plus me-1"></i> Thêm bài học
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Sửa Bài học -->
+    <div class="custom-modal-overlay" id="editLessonModal">
+        <div class="custom-modal-card" style="max-width: 750px;">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="fas fa-edit text-primary me-2"></i> Chỉnh sửa bài học
+                </h5>
+                <button type="button" class="btn-close" onclick="closeModal('editLessonModal')"></button>
+            </div>
+            <form method="post" asp-page-handler="UpdateLesson">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+                <input type="hidden" name="lessonId" id="editLessonId" />
+
+                <div class="custom-modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tiêu đề bài học <span class="text-danger">*</span></label>
+                        <input type="text" name="title" id="editLessonTitle" class="form-control" required />
+                    </div>
+
+                    <div class="mb-0">
+                        <label class="form-label fw-semibold">Nội dung bài học</label>
+                        <textarea name="content" id="editLessonContent" class="form-control" rows="8"></textarea>
+                    </div>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editLessonModal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="fas fa-check me-1"></i> Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Xem trước nội dung Bài học -->
+    <div class="custom-modal-overlay" id="viewLessonModal">
+        <div class="custom-modal-card" style="max-width: 800px;">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-dark" id="viewLessonTitle"></h5>
+                <button type="button" class="btn-close" onclick="closeModal('viewLessonModal')"></button>
+            </div>
+            <div class="custom-modal-body">
+                <div id="viewLessonContent" class="p-3 bg-light rounded border" style="max-height: 450px; overflow-y: auto; white-space: pre-wrap; font-family: inherit; line-height: 1.6;">
+                    <div class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-1"></i> Đang tải nội dung...</div>
+                </div>
+            </div>
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('viewLessonModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Xóa Bài học -->
+    <div class="custom-modal-overlay" id="deleteLessonModal">
+        <div class="custom-modal-card" style="max-width: 480px;">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Xác nhận xóa bài học
+                </h5>
+                <button type="button" class="btn-close" onclick="closeModal('deleteLessonModal')"></button>
+            </div>
+            <form method="post" asp-page-handler="DeleteLesson">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+                <input type="hidden" name="lessonId" id="deleteLessonId" />
+
+                <div class="custom-modal-body">
+                    <p>Bạn có chắc chắn muốn xóa bài học này không?</p>
+                    <blockquote class="border-start border-3 border-danger ps-3 py-1 bg-light small mb-3" id="deleteLessonTitle"></blockquote>
+                    <p class="text-muted small mb-0">Tiến trình học của học viên liên quan đến bài này cũng sẽ bị gỡ bỏ.</p>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('deleteLessonModal')">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-danger fw-semibold">
+                        <i class="fas fa-trash-alt me-1"></i> Xóa bài học
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <!-- Select2 JS -->
+    <script src="~/libs/select2/js/select2.full.min.js"></script>
+
+    <script>
+        $(document).ready(function () {
+            // Select2 AJAX Pagination
+            $('#subjectSelect').select2({
+                placeholder: '--- Gõ tên hoặc chọn môn học ---',
+                allowClear: true,
+                language: {
+                    noResults: function () { return "Không tìm thấy môn học nào"; },
+                    searching: function () { return "Đang tìm kiếm môn học..."; },
+                    loadingMore: function () { return "Đang tải thêm môn học..."; }
+                },
+                ajax: {
+                    url: '?handler=SubjectsJson',
+                    dataType: 'json',
+                    delay: 300,
+                    data: function (params) {
+                        return {
+                            name: params.term || '',
+                            page: params.page || 1,
+                            pageSize: 10
+                        };
+                    },
+                    processResults: function (data, params) {
+                        params.page = params.page || 1;
+                        return {
+                            results: data.items,
+                            pagination: {
+                                more: (params.page * 10) < data.totalCount
+                            }
+                        };
+                    },
+                    cache: true
+                }
+            });
+
+            $('#subjectSelect').on('change', function () {
+                var selectedId = $(this).val();
+                if (selectedId) {
+                    window.location.href = '?subjectId=' + selectedId;
+                } else {
+                    window.location.href = '@Url.Page("/Teacher/Curriculum")';
+                }
+            });
+        });
+
+        function openModal(id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeModal(id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function openCreateChapterModal() {
+            openModal('createChapterModal');
+        }
+
+        function openEditChapterModal(id, name, desc) {
+            document.getElementById('editChapterId').value = id;
+            document.getElementById('editChapterName').value = name;
+            document.getElementById('editChapterDesc').value = desc || '';
+            openModal('editChapterModal');
+        }
+
+        function openDeleteChapterModal(id, name) {
+            document.getElementById('deleteChapterId').value = id;
+            document.getElementById('deleteChapterName').textContent = name;
+            openModal('deleteChapterModal');
+        }
+
+        function openCreateLessonModal(chapterId, chapterName) {
+            document.getElementById('createLessonChapterId').value = chapterId;
+            document.getElementById('createLessonChapterTitle').textContent = 'Chương: ' + chapterName;
+            openModal('createLessonModal');
+        }
+
+        function openEditLessonModal(lessonId) {
+            $.getJSON('?handler=LessonDetailJson', { lessonId: lessonId }, function (res) {
+                if (res && res.success && res.data) {
+                    document.getElementById('editLessonId').value = res.data.id;
+                    document.getElementById('editLessonTitle').value = res.data.title;
+                    document.getElementById('editLessonContent').value = res.data.content || '';
+                    openModal('editLessonModal');
+                } else {
+                    alert(res.message || 'Không thể tải chi tiết bài học.');
+                }
+            });
+        }
+
+        function openViewLessonModal(lessonId, lessonTitle) {
+            document.getElementById('viewLessonTitle').textContent = lessonTitle;
+            var contentEl = document.getElementById('viewLessonContent');
+            contentEl.innerHTML = '<div class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-1"></i> Đang tải...</div>';
+            openModal('viewLessonModal');
+
+            $.getJSON('?handler=LessonDetailJson', { lessonId: lessonId }, function (res) {
+                if (res && res.success && res.data) {
+                    var text = res.data.content;
+                    if (!text || text.trim() === '') {
+                        contentEl.innerHTML = '<div class="text-muted font-italic">Chưa có nội dung chi tiết cho bài học này.</div>';
+                    } else {
+                        contentEl.textContent = text;
+                    }
+                } else {
+                    contentEl.innerHTML = '<div class="text-danger">' + (res.message || 'Lỗi khi tải nội dung bài học.') + '</div>';
+                }
+            });
+        }
+
+        function openDeleteLessonModal(id, title) {
+            document.getElementById('deleteLessonId').value = id;
+            document.getElementById('deleteLessonTitle').textContent = title;
+            openModal('deleteLessonModal');
+        }
+    </script>
+}

@@ -1,0 +1,958 @@
+@page "/Teacher/Exams"
+@model LearningBff.Pages.Teacher.ExamsModel
+@{
+    ViewData["Title"] = "Quản lý Đề thi - Giảng viên";
+}
+
+<!-- Select2 CSS -->
+<link rel="stylesheet" href="~/libs/select2/css/select2.min.css" />
+
+<style>
+    :root {
+        --teach-primary: #6366f1;
+        --teach-primary-dark: #4338ca;
+        --teach-accent: #0ea5e9;
+        --teach-bg: #f8fafc;
+        --teach-card-bg: #ffffff;
+        --teach-border: #e2e8f0;
+        --teach-text: #0f172a;
+        --teach-muted: #64748b;
+        --teach-success: #10b981;
+        --teach-warning: #f59e0b;
+        --teach-danger: #ef4444;
+    }
+
+    .teacher-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem 1rem;
+    }
+
+    /* Hero Banner */
+    .teacher-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+        border-radius: 1.25rem;
+        padding: 2rem;
+        color: #ffffff;
+        margin-bottom: 1.75rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 25px -5px rgba(30, 27, 75, 0.3);
+    }
+    .teacher-hero::after {
+        content: '';
+        position: absolute;
+        top: -40%;
+        right: -10%;
+        width: 400px;
+        height: 400px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0) 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .teacher-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(99, 102, 241, 0.25);
+        border: 1px solid rgba(165, 180, 252, 0.3);
+        color: #c7d2fe;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        margin-bottom: 0.75rem;
+    }
+    .teacher-hero-title {
+        font-size: 1.85rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-bottom: 0.5rem;
+    }
+    .teacher-hero-subtitle {
+        color: #cbd5e1;
+        font-size: 0.95rem;
+        max-width: 750px;
+        margin-bottom: 1.25rem;
+        line-height: 1.5;
+    }
+
+    /* Select2 Section */
+    .subject-selector-card {
+        background: #ffffff;
+        border: 1px solid var(--teach-border);
+        border-radius: 1rem;
+        padding: 1.25rem 1.5rem;
+        margin-bottom: 1.75rem;
+        box-shadow: 0 4px 15px -3px rgba(0, 0, 0, 0.05);
+    }
+    .select2-container--default .select2-selection--single {
+        height: 44px;
+        border: 1.5px solid #cbd5e1;
+        border-radius: 0.65rem;
+        display: flex;
+        align-items: center;
+        padding: 0 0.5rem;
+        transition: all 0.2s ease;
+    }
+    .select2-container--default .select2-selection--single:focus,
+    .select2-container--default.select2-container--open .select2-selection--single {
+        border-color: var(--teach-primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+    }
+    .select2-container--default .select2-selection--single .select2-selection__rendered {
+        color: #1e293b;
+        font-weight: 600;
+        font-size: 0.95rem;
+        line-height: 42px;
+    }
+    .select2-container--default .select2-selection--single .select2-selection__arrow {
+        height: 42px;
+        right: 10px;
+    }
+    .select2-dropdown {
+        border: 1.5px solid #cbd5e1;
+        border-radius: 0.65rem;
+        box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1);
+        overflow: hidden;
+    }
+    .select2-container--default .select2-results__option--highlighted[aria-selected] {
+        background-color: var(--teach-primary);
+    }
+
+    /* Content Card */
+    .teach-card {
+        background: var(--teach-card-bg);
+        border: 1px solid var(--teach-border);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    /* Table & Badges */
+    .custom-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+    .custom-table th {
+        background: #f8fafc;
+        color: #475569;
+        font-size: 0.8rem;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        padding: 0.85rem 1rem;
+        border-bottom: 1.5px solid #e2e8f0;
+    }
+    .custom-table td {
+        padding: 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        vertical-align: middle;
+        font-size: 0.9rem;
+    }
+    .custom-table tr:hover td {
+        background-color: #f8fafc;
+    }
+
+    .badge-pub {
+        font-size: 0.75rem;
+        font-weight: 600;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+    }
+    .badge-pub-yes { background: #dcfce7; color: #15803d; border: 1px solid #bbf7d0; }
+    .badge-pub-no { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
+
+    /* Modals */
+    .custom-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+        padding: 1rem;
+    }
+    .custom-modal-overlay.active {
+        display: flex;
+    }
+    .custom-modal-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        max-width: 680px;
+        width: 100%;
+        max-height: 90vh;
+        overflow-y: auto;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .custom-modal-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .custom-modal-body {
+        padding: 1.5rem;
+    }
+    .custom-modal-footer {
+        padding: 1rem 1.5rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+</style>
+
+<div class="teacher-container">
+    <!-- Hero Banner -->
+    <div class="teacher-hero">
+        <div class="teacher-hero-badge">
+            <i class="fas fa-file-signature"></i>
+            <span>Đề thi & Đánh giá</span>
+        </div>
+        <h1 class="teacher-hero-title">Quản lý Đề thi</h1>
+        <p class="teacher-hero-subtitle">
+            Tạo và cấu hình đề thi trắc nghiệm, gán câu hỏi từ ngân hàng đề, cài đặt thời gian làm bài và theo dõi kết quả thi của từng học viên.
+        </p>
+
+        <div class="d-flex flex-wrap gap-2">
+            <a href="~/Teacher/Subjects" class="btn btn-sm btn-outline-light">
+                <i class="fas fa-arrow-left me-1"></i> Danh sách Môn học
+            </a>
+            @if (Model.SubjectId.HasValue)
+            {
+                <a href="~/Teacher/Questions?subjectId=@Model.SubjectId" class="btn btn-sm btn-light fw-semibold text-primary">
+                    <i class="fas fa-database me-1"></i> Ngân hàng câu hỏi môn này
+                </a>
+            }
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert">
+            <i class="fas fa-check-circle fs-5"></i>
+            <div>@Model.SuccessMessage</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert">
+            <i class="fas fa-exclamation-triangle fs-5"></i>
+            <div>@Model.ErrorMessage</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Select2 Subject Selector -->
+    <div class="subject-selector-card">
+        <div class="row align-items-center g-3">
+            <div class="col-md-3">
+                <label for="subjectSelect" class="form-label fw-bold text-dark mb-0">
+                    <i class="fas fa-book-open text-primary me-1"></i> Chọn Môn học:
+                </label>
+                <div class="text-muted small">Tìm kiếm và cuộn trang môn học</div>
+            </div>
+            <div class="col-md-9">
+                <select id="subjectSelect" class="form-select" style="width: 100%;">
+                    @if (Model.CurrentSubject != null)
+                    {
+                        <option value="@Model.CurrentSubject.Id" selected="selected">@Model.CurrentSubject.Name</option>
+                    }
+                </select>
+            </div>
+        </div>
+    </div>
+
+    @if (Model.CurrentSubject == null)
+    {
+        <!-- Empty State: Chưa chọn môn học -->
+        <div class="teach-card text-center py-5">
+            <div style="font-size: 3.5rem; color: #cbd5e1; margin-bottom: 1rem;">
+                <i class="fas fa-arrow-up-right-dots"></i>
+            </div>
+            <h4 class="fw-bold text-secondary">Vui lòng chọn môn học</h4>
+            <p class="text-muted small mx-auto mb-4" style="max-width: 500px;">
+                Dùng ô chọn Select2 phía trên để chọn môn học bạn muốn quản lý đề thi. Select2 hỗ trợ gõ tên tìm kiếm và tự động phân trang khi cuộn.
+            </p>
+            <a href="~/Teacher/Subjects" class="btn btn-outline-primary">
+                <i class="fas fa-list me-1"></i> Xem danh sách môn học của tôi
+            </a>
+        </div>
+    }
+    else
+    {
+        <!-- Main Panel for Selected Subject -->
+        <div class="teach-card">
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pb-3 mb-3 border-bottom">
+                <div>
+                    <div class="d-flex align-items-center gap-2">
+                        <h2 class="h5 fw-bold mb-0 text-dark">
+                            <i class="fas fa-folder text-warning me-1"></i> @Model.CurrentSubject.Name
+                        </h2>
+                        <span class="badge bg-purple rounded-pill text-white" style="background: #7c3aed;">@Model.TotalCount đề thi</span>
+                        @if (Model.CurrentSubject.IsActive)
+                        {
+                            <span class="badge bg-success-subtle text-success border border-success" title="Môn học đang mở đăng ký">
+                                <i class="fas fa-unlock me-1"></i> Đang mở đăng ký
+                            </span>
+                        }
+                        else
+                        {
+                            <span class="badge bg-danger-subtle text-danger border border-danger" title="Môn học đã khóa đăng ký">
+                                <i class="fas fa-lock me-1"></i> Đã khóa đăng ký
+                            </span>
+                        }
+                    </div>
+                    <div class="text-muted small mt-1">
+                        @(string.IsNullOrWhiteSpace(Model.CurrentSubject.Description) ? "Môn học phụ trách bởi bạn" : Model.CurrentSubject.Description)
+                    </div>
+                </div>
+
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-primary fw-semibold" onclick="openCreateExamModal()">
+                        <i class="fas fa-plus me-1"></i> Tạo đề thi mới
+                    </button>
+                    <a href="~/Teacher/Questions?subjectId=@Model.CurrentSubject.Id" class="btn btn-outline-primary">
+                        <i class="fas fa-database me-1"></i> Ngân hàng câu hỏi
+                    </a>
+                </div>
+            </div>
+
+            <!-- Search Form -->
+            <form method="get" class="row g-2 align-items-center mb-4">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+
+                <div class="col-md-6">
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text bg-white border-end-0">
+                            <i class="fas fa-search text-muted"></i>
+                        </span>
+                        <input type="text" name="search" class="form-control border-start-0 ps-0" 
+                               placeholder="Tìm đề thi theo tiêu đề..." value="@Model.Search">
+                        <button type="submit" class="btn btn-primary">Tìm kiếm</button>
+                        @if (!string.IsNullOrWhiteSpace(Model.Search))
+                        {
+                            <a href="~/Teacher/Exams?subjectId=@Model.CurrentSubject.Id" class="btn btn-outline-secondary" title="Xóa bộ lọc">
+                                <i class="fas fa-times"></i>
+                            </a>
+                        }
+                    </div>
+                </div>
+            </form>
+
+            @if (!Model.Exams.Any())
+            {
+                <div class="text-center py-5 bg-light rounded-3">
+                    <i class="fas fa-file-alt fa-3x text-muted mb-2" style="opacity: 0.4;"></i>
+                    <h6 class="fw-bold text-secondary">Chưa có đề thi nào trong môn học này</h6>
+                    <p class="text-muted small mb-3">Hãy tạo đề thi mới và thêm các câu hỏi trắc nghiệm từ ngân hàng câu hỏi.</p>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="openCreateExamModal()">
+                        <i class="fas fa-plus me-1"></i> Tạo đề thi ngay
+                    </button>
+                </div>
+            }
+            else
+            {
+                <!-- Exams Table -->
+                <div class="table-responsive">
+                    <table class="custom-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 50px;">#</th>
+                                <th>Tiêu đề đề thi</th>
+                                <th class="text-center" style="width: 110px;">Thời lượng</th>
+                                <th class="text-center" style="width: 140px;">Trạng thái</th>
+                                <th class="text-center" style="width: 130px;">Ngày tạo</th>
+                                <th class="text-end" style="width: 250px;">Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @for (int i = 0; i < Model.Exams.Count; i++)
+                            {
+                                var ex = Model.Exams[i];
+                                <tr>
+                                    <td class="text-muted fw-semibold">@(Model.StartIndex + i)</td>
+                                    <td>
+                                        <div class="fw-bold text-dark mb-1">@ex.Title</div>
+                                        <div class="text-muted small" style="font-size: 0.8rem;">
+                                            @(string.IsNullOrWhiteSpace(ex.Description) ? "Không có mô tả" : ex.Description)
+                                        </div>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-dark border">
+                                            <i class="fas fa-clock me-1 text-primary"></i> Đang tải...
+                                        </span>
+                                    </td>
+                                    <td class="text-center">
+                                        <span class="badge bg-light text-secondary border exam-pub-badge" data-exam-id="@ex.Id">
+                                            Đang kiểm tra...
+                                        </span>
+                                    </td>
+                                    <td class="text-center text-muted small">
+                                        @ex.CreationTime.ToLocalTime().ToString("dd/MM/yyyy")
+                                    </td>
+                                    <td class="text-end">
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-purple" style="color: #6d28d9; border-color: #ddd6fe;"
+                                                    onclick="openExamQuestionsModal(@Model.CurrentSubject.Id, @ex.Id, '@Html.Raw(Html.Encode(ex.Title))')"
+                                                    title="Quản lý câu hỏi trong đề">
+                                                <i class="fas fa-tasks me-1"></i> Câu hỏi
+                                            </button>
+                                            <button type="button" class="btn btn-outline-info"
+                                                    onclick="openExamResultsModal(@Model.CurrentSubject.Id, @ex.Id, '@Html.Raw(Html.Encode(ex.Title))')"
+                                                    title="Xem kết quả thi của học viên">
+                                                <i class="fas fa-chart-bar"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-primary"
+                                                    onclick="openEditExamModal(@Model.CurrentSubject.Id, @ex.Id)"
+                                                    title="Chỉnh sửa cấu hình đề">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger"
+                                                    onclick="openDeleteExamModal(@ex.Id, '@Html.Raw(Html.Encode(ex.Title))')"
+                                                    title="Xóa đề thi">
+                                                <i class="fas fa-trash-alt"></i>
+                                            </button>
+                                        </div>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Phân trang -->
+                @if (Model.TotalPages > 1)
+                {
+                    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-3 mt-3 border-top">
+                        <div class="text-muted small">
+                            Hiển thị <strong>@Model.StartIndex</strong> - <strong>@Model.EndIndex</strong> trên <strong>@Model.TotalCount</strong> đề thi
+                        </div>
+                        <nav>
+                            <ul class="pagination pagination-sm mb-0">
+                                <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                                    <a class="page-link" href="?subjectId=@Model.CurrentSubject.Id&currentPage=@(Model.CurrentPage - 1)&search=@Model.Search">
+                                        <i class="fas fa-chevron-left"></i>
+                                    </a>
+                                </li>
+                                @for (int p = Model.StartPage; p <= Model.EndPage; p++)
+                                {
+                                    <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                                        <a class="page-link" href="?subjectId=@Model.CurrentSubject.Id&currentPage=@p&search=@Model.Search">@p</a>
+                                    </li>
+                                }
+                                <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                                    <a class="page-link" href="?subjectId=@Model.CurrentSubject.Id&currentPage=@(Model.CurrentPage + 1)&search=@Model.Search">
+                                        <i class="fas fa-chevron-right"></i>
+                                    </a>
+                                </li>
+                            </ul>
+                        </nav>
+                    </div>
+                }
+            }
+        </div>
+    }
+</div>
+
+@if (Model.CurrentSubject != null)
+{
+    <!-- Modal: Tạo đề thi mới -->
+    <div class="custom-modal-overlay" id="createExamModal">
+        <div class="custom-modal-card">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="fas fa-plus-circle text-primary me-2"></i> Tạo đề thi mới
+                </h5>
+                <button type="button" class="btn-close" onclick="closeModal('createExamModal')"></button>
+            </div>
+            <form method="post" asp-page-handler="CreateExam">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+                <input type="hidden" name="search" value="@Model.Search" />
+                <input type="hidden" name="currentPage" value="@Model.CurrentPage" />
+
+                <div class="custom-modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tiêu đề đề thi <span class="text-danger">*</span></label>
+                        <input type="text" name="title" class="form-control" placeholder="Ví dụ: Kiểm tra giữa kỳ môn..." required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mô tả đề thi</label>
+                        <textarea name="description" class="form-control" rows="2" placeholder="Nội dung tóm tắt hoặc quy định bài thi..."></textarea>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Thời lượng (Phút) <span class="text-danger">*</span></label>
+                            <input type="number" min="1" name="durationInMinutes" class="form-control" value="45" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Điểm tối đa <span class="text-danger">*</span></label>
+                            <input type="number" step="0.5" min="1" name="maxScore" class="form-control" value="10" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Điểm đạt <span class="text-danger">*</span></label>
+                            <input type="number" step="0.5" min="0" name="passScore" class="form-control" value="5" required />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="shuffleQuestions" value="true" id="createShuffleQ" checked>
+                                <label class="form-check-label fw-semibold" for="createShuffleQ">Xáo trộn câu hỏi</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="shuffleAnswers" value="true" id="createShuffleA" checked>
+                                <label class="form-check-label fw-semibold" for="createShuffleA">Xáo trộn đáp án</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="isPublished" value="true" id="createIsPublished" checked>
+                                <label class="form-check-label fw-semibold" for="createIsPublished">Xuất bản ngay (Mở cho học viên)</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Số lần làm tối đa (Để trống nếu không giới hạn)</label>
+                            <input type="number" min="1" name="maxAttempts" class="form-control form-control-sm" placeholder="Không giới hạn" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('createExamModal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="fas fa-save me-1"></i> Lưu đề thi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Chỉnh sửa đề thi -->
+    <div class="custom-modal-overlay" id="editExamModal">
+        <div class="custom-modal-card">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="fas fa-edit text-primary me-2"></i> Chỉnh sửa đề thi
+                </h5>
+                <button type="button" class="btn-close" onclick="closeModal('editExamModal')"></button>
+            </div>
+            <form method="post" asp-page-handler="UpdateExam">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+                <input type="hidden" name="examId" id="editExamId" />
+                <input type="hidden" name="search" value="@Model.Search" />
+                <input type="hidden" name="currentPage" value="@Model.CurrentPage" />
+
+                <div class="custom-modal-body">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Tiêu đề đề thi <span class="text-danger">*</span></label>
+                        <input type="text" name="title" id="editExamTitle" class="form-control" required />
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Mô tả đề thi</label>
+                        <textarea name="description" id="editExamDescription" class="form-control" rows="2"></textarea>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Thời lượng (Phút) <span class="text-danger">*</span></label>
+                            <input type="number" min="1" name="durationInMinutes" id="editExamDuration" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Điểm tối đa <span class="text-danger">*</span></label>
+                            <input type="number" step="0.5" min="1" name="maxScore" id="editExamMaxScore" class="form-control" required />
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label fw-semibold">Điểm đạt <span class="text-danger">*</span></label>
+                            <input type="number" step="0.5" min="0" name="passScore" id="editExamPassScore" class="form-control" required />
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="shuffleQuestions" value="true" id="editShuffleQ">
+                                <label class="form-check-label fw-semibold" for="editShuffleQ">Xáo trộn câu hỏi</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="shuffleAnswers" value="true" id="editShuffleA">
+                                <label class="form-check-label fw-semibold" for="editShuffleA">Xáo trộn đáp án</label>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row g-3 mb-3">
+                        <div class="col-md-6">
+                            <div class="form-check form-switch">
+                                <input class="form-check-input" type="checkbox" name="isPublished" value="true" id="editIsPublished">
+                                <label class="form-check-label fw-semibold" for="editIsPublished">Đã xuất bản</label>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label small fw-semibold">Số lần làm tối đa</label>
+                            <input type="number" min="1" name="maxAttempts" id="editMaxAttempts" class="form-control form-control-sm" placeholder="Không giới hạn" />
+                        </div>
+                    </div>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('editExamModal')">Hủy</button>
+                    <button type="submit" class="btn btn-primary fw-semibold">
+                        <i class="fas fa-check me-1"></i> Lưu thay đổi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Xóa đề thi -->
+    <div class="custom-modal-overlay" id="deleteExamModal">
+        <div class="custom-modal-card" style="max-width: 480px;">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-danger">
+                    <i class="fas fa-exclamation-triangle me-2"></i> Xác nhận xóa đề thi
+                </h5>
+                <button type="button" class="btn-close" onclick="closeModal('deleteExamModal')"></button>
+            </div>
+            <form method="post" asp-page-handler="DeleteExam">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+                <input type="hidden" name="examId" id="deleteExamId" />
+                <input type="hidden" name="search" value="@Model.Search" />
+                <input type="hidden" name="currentPage" value="@Model.CurrentPage" />
+
+                <div class="custom-modal-body">
+                    <p>Bạn có chắc chắn muốn xóa đề thi này không?</p>
+                    <blockquote class="border-start border-3 border-danger ps-3 py-1 bg-light small mb-3" id="deleteExamTitle"></blockquote>
+                    <p class="text-muted small mb-0">Hành động này không thể hoàn tác.</p>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('deleteExamModal')">Hủy bỏ</button>
+                    <button type="submit" class="btn btn-danger fw-semibold">
+                        <i class="fas fa-trash-alt me-1"></i> Xóa đề thi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Modal: Quản lý câu hỏi trong đề -->
+    <div class="custom-modal-overlay" id="examQuestionsModal">
+        <div class="custom-modal-card" style="max-width: 800px;">
+            <div class="custom-modal-header">
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="fas fa-tasks text-purple me-2" style="color: #7c3aed;"></i> Câu hỏi trong đề thi
+                    </h5>
+                    <div class="text-muted small mt-1" id="examQuestionsModalTitle"></div>
+                </div>
+                <button type="button" class="btn-close" onclick="closeModal('examQuestionsModal')"></button>
+            </div>
+
+            <div class="custom-modal-body">
+                <ul class="nav nav-pills mb-3" id="examQuestionTabs" role="tablist">
+                    <li class="nav-item">
+                        <button class="nav-link active" id="tab-in-exam-btn" data-bs-toggle="pill" data-bs-target="#tab-in-exam" type="button">
+                            <i class="fas fa-check-circle me-1"></i> Đã có trong đề (<span id="inExamCount">0</span>)
+                        </button>
+                    </li>
+                    <li class="nav-item">
+                        <button class="nav-link" id="tab-available-btn" data-bs-toggle="pill" data-bs-target="#tab-available" type="button">
+                            <i class="fas fa-plus-circle me-1"></i> Thêm từ ngân hàng (<span id="availableCount">0</span>)
+                        </button>
+                    </li>
+                </ul>
+
+                <div class="tab-content">
+                    <!-- Tab câu hỏi trong đề -->
+                    <div class="tab-pane fade show active" id="tab-in-exam">
+                        <div id="inExamQuestionsContainer" style="max-height: 400px; overflow-y: auto;">
+                            <div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>
+                        </div>
+                    </div>
+
+                    <!-- Tab câu hỏi khả dụng -->
+                    <div class="tab-pane fade" id="tab-available">
+                        <div id="availableQuestionsContainer" style="max-height: 400px; overflow-y: auto;">
+                            <div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('examQuestionsModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal: Xem kết quả thi của học viên -->
+    <div class="custom-modal-overlay" id="examResultsModal">
+        <div class="custom-modal-card" style="max-width: 850px;">
+            <div class="custom-modal-header">
+                <div>
+                    <h5 class="fw-bold mb-0 text-dark">
+                        <i class="fas fa-poll text-info me-2"></i> Kết quả thi của học viên
+                    </h5>
+                    <div class="text-muted small mt-1" id="examResultsModalTitle"></div>
+                </div>
+                <button type="button" class="btn-close" onclick="closeModal('examResultsModal')"></button>
+            </div>
+
+            <div class="custom-modal-body">
+                <div id="examResultsContainer" style="max-height: 450px; overflow-y: auto;">
+                    <div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Đang tải kết quả...</div>
+                </div>
+            </div>
+
+            <div class="custom-modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeModal('examResultsModal')">Đóng</button>
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <!-- Select2 JS -->
+    <script src="~/libs/select2/js/select2.full.min.js"></script>
+
+    <script>
+        var currentSubjectId = @(Model.CurrentSubject != null ? Model.CurrentSubject.Id : 0);
+        var activeExamId = 0;
+
+        $(document).ready(function () {
+            // Khởi tạo Select2 AJAX phân trang
+            $('#subjectSelect').select2({
+                placeholder: '--- Gõ tên hoặc chọn môn học ---',
+                allowClear: true,
+                language: {
+                    noResults: function () { return "Không tìm thấy môn học nào"; },
+                    searching: function () { return "Đang tìm kiếm môn học..."; },
+                    loadingMore: function () { return "Đang tải thêm môn học..."; }
+                },
+                ajax: {
+                    url: '?handler=SubjectsJson',
+                    dataType: 'json',
+                    delay: 300,
+                    data: function (params) {
+                        return {
+                            name: params.term || '',
+                            page: params.page || 1,
+                            pageSize: 10
+                        };
+                    },
+                    processResults: function (data, params) {
+                        params.page = params.page || 1;
+                        return {
+                            results: data.items,
+                            pagination: {
+                                more: (params.page * 10) < data.totalCount
+                            }
+                        };
+                    },
+                    cache: true
+                }
+            });
+
+            // Khi chọn môn học -> redirect
+            $('#subjectSelect').on('change', function () {
+                var selectedId = $(this).val();
+                if (selectedId) {
+                    window.location.href = '?subjectId=' + selectedId;
+                } else {
+                    window.location.href = '@Url.Page("/Teacher/Exams")';
+                }
+            });
+
+            // Tải thông tin chi tiết từng đề thi (thời lượng, trạng thái xuất bản)
+            $('.exam-pub-badge').each(function () {
+                var badge = $(this);
+                var examId = badge.data('exam-id');
+                var row = badge.closest('tr');
+                if (currentSubjectId && examId) {
+                    $.getJSON('?handler=ExamDetailsJson', { subjectId: currentSubjectId, examId: examId }, function (res) {
+                        if (res && res.success && res.data) {
+                            var d = res.data;
+                            row.find('td:nth-child(3)').html('<span class="badge bg-light text-dark border"><i class="fas fa-clock me-1 text-primary"></i> ' + d.durationInMinutes + ' phút</span>');
+                            if (d.isPublished) {
+                                badge.removeClass('bg-light text-secondary').addClass('badge-pub badge-pub-yes').html('<i class="fas fa-check-circle me-1"></i> Đã xuất bản');
+                            } else {
+                                badge.removeClass('bg-light text-secondary').addClass('badge-pub badge-pub-no').html('<i class="fas fa-pencil-ruler me-1"></i> Bản nháp');
+                            }
+                        }
+                    });
+                }
+            });
+        });
+
+        function openModal(id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.classList.add('active');
+                document.body.style.overflow = 'hidden';
+            }
+        }
+
+        function closeModal(id) {
+            var el = document.getElementById(id);
+            if (el) {
+                el.classList.remove('active');
+                document.body.style.overflow = '';
+            }
+        }
+
+        function openCreateExamModal() {
+            openModal('createExamModal');
+        }
+
+        function openEditExamModal(subjectId, examId) {
+            $.getJSON('?handler=ExamDetailsJson', { subjectId: subjectId, examId: examId }, function (res) {
+                if (res && res.success && res.data) {
+                    var d = res.data;
+                    document.getElementById('editExamId').value = d.id;
+                    document.getElementById('editExamTitle').value = d.title;
+                    document.getElementById('editExamDescription').value = d.description || '';
+                    document.getElementById('editExamDuration').value = d.durationInMinutes;
+                    document.getElementById('editExamMaxScore').value = d.maxScore;
+                    document.getElementById('editExamPassScore').value = d.passScore;
+                    document.getElementById('editShuffleQ').checked = d.shuffleQuestions;
+                    document.getElementById('editShuffleA').checked = d.shuffleAnswers;
+                    document.getElementById('editIsPublished').checked = d.isPublished;
+                    document.getElementById('editMaxAttempts').value = d.maxAttempts || '';
+                    openModal('editExamModal');
+                }
+            });
+        }
+
+        function openDeleteExamModal(id, title) {
+            document.getElementById('deleteExamId').value = id;
+            document.getElementById('deleteExamTitle').textContent = title;
+            openModal('deleteExamModal');
+        }
+
+        // Quản lý câu hỏi trong đề
+        function openExamQuestionsModal(subjectId, examId, title) {
+            activeExamId = examId;
+            document.getElementById('examQuestionsModalTitle').textContent = title;
+            loadExamQuestions(subjectId, examId);
+            openModal('examQuestionsModal');
+        }
+
+        function loadExamQuestions(subjectId, examId) {
+            var inContainer = $('#inExamQuestionsContainer');
+            var avContainer = $('#availableQuestionsContainer');
+            inContainer.html('<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>');
+            avContainer.html('<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Đang tải...</div>');
+
+            $.getJSON('?handler=ExamQuestionsJson', { subjectId: subjectId, examId: examId }, function (res) {
+                if (res && res.success) {
+                    $('#inExamCount').text(res.examQuestions.length);
+                    $('#availableCount').text(res.availableQuestions.length);
+
+                    // Render questions in exam
+                    if (res.examQuestions.length === 0) {
+                        inContainer.html('<div class="alert alert-info small mb-0"><i class="fas fa-info-circle me-1"></i> Chưa có câu hỏi nào trong đề thi này. Hãy chuyển sang tab "Thêm từ ngân hàng" để chọn câu hỏi.</div>');
+                    } else {
+                        var html = '<div class="list-group">';
+                        res.examQuestions.forEach(function (q, idx) {
+                            html += '<div class="list-group-item d-flex align-items-center justify-content-between p-2">';
+                            html += '  <div><span class="badge bg-secondary me-2">' + (idx + 1) + '</span><span class="fw-semibold">' + q.title + '</span> <span class="badge bg-light text-dark border ms-2">' + q.defaultScore + ' điểm</span></div>';
+                            html += '  <button type="button" class="btn btn-sm btn-outline-danger" onclick="removeQuestionFromExam(' + q.id + ')"><i class="fas fa-trash-alt me-1"></i> Gỡ</button>';
+                            html += '</div>';
+                        });
+                        html += '</div>';
+                        inContainer.html(html);
+                    }
+
+                    // Render available questions
+                    if (res.availableQuestions.length === 0) {
+                        avContainer.html('<div class="alert alert-success small mb-0"><i class="fas fa-check-circle me-1"></i> Đã thêm tất cả câu hỏi của môn học này vào đề thi!</div>');
+                    } else {
+                        var htmlAv = '<div class="list-group">';
+                        res.availableQuestions.forEach(function (q) {
+                            htmlAv += '<div class="list-group-item d-flex align-items-center justify-content-between p-2">';
+                            htmlAv += '  <div><span class="fw-semibold">' + q.title + '</span> <span class="badge bg-light text-dark border ms-2">' + q.defaultScore + ' điểm</span></div>';
+                            htmlAv += '  <button type="button" class="btn btn-sm btn-outline-success" onclick="addQuestionToExam(' + q.id + ')"><i class="fas fa-plus me-1"></i> Thêm</button>';
+                            htmlAv += '</div>';
+                        });
+                        htmlAv += '</div>';
+                        avContainer.html(htmlAv);
+                    }
+                }
+            });
+        }
+
+        function addQuestionToExam(questionId) {
+            $.post('?handler=AddQuestion', { subjectId: currentSubjectId, examId: activeExamId, questionId: questionId }, function (res) {
+                if (res && res.success) {
+                    loadExamQuestions(currentSubjectId, activeExamId);
+                } else {
+                    alert(res.message || 'Không thể thêm câu hỏi.');
+                }
+            });
+        }
+
+        function removeQuestionFromExam(questionId) {
+            if (!confirm('Bạn có chắc chắn muốn gỡ câu hỏi này khỏi đề thi?')) return;
+            $.post('?handler=RemoveQuestion', { subjectId: currentSubjectId, examId: activeExamId, questionId: questionId }, function (res) {
+                if (res && res.success) {
+                    loadExamQuestions(currentSubjectId, activeExamId);
+                } else {
+                    alert(res.message || 'Không thể gỡ câu hỏi.');
+                }
+            });
+        }
+
+        // Kết quả thi
+        function openExamResultsModal(subjectId, examId, title) {
+            document.getElementById('examResultsModalTitle').textContent = title;
+            var container = $('#examResultsContainer');
+            container.html('<div class="text-center py-4 text-muted"><i class="fas fa-spinner fa-spin"></i> Đang tải danh sách kết quả...</div>');
+            openModal('examResultsModal');
+
+            $.getJSON('?handler=ExamResultsJson', { subjectId: subjectId, examId: examId }, function (res) {
+                if (res && res.success) {
+                    var items = res.data;
+                    if (!items || items.length === 0) {
+                        container.html('<div class="alert alert-info small mb-0"><i class="fas fa-info-circle me-1"></i> Chưa có học viên nào nộp bài thi cho đề này.</div>');
+                        return;
+                    }
+
+                    var html = '<table class="custom-table table-sm">';
+                    html += '<thead><tr><th>Học viên</th><th class="text-center">Điểm số</th><th class="text-center">Kết quả</th><th>Thời gian nộp</th><th class="text-end">Chi tiết</th></tr></thead><tbody>';
+                    items.forEach(function (r) {
+                        var dateStr = new Date(r.submitTime).toLocaleString();
+                        html += '<tr>';
+                        html += '  <td><strong>' + (r.userFullName || r.userName) + '</strong><br><small class="text-muted">' + r.userName + '</small></td>';
+                        html += '  <td class="text-center fw-bold text-primary">' + r.score.toFixed(1) + '</td>';
+                        html += '  <td class="text-center">' + (r.isPassed ? '<span class="badge bg-success">Đạt</span>' : '<span class="badge bg-danger">Chưa đạt</span>') + '</td>';
+                        html += '  <td class="small text-muted">' + dateStr + '</td>';
+                        html += '  <td class="text-end"><a href="/Exam/Result?id=' + r.id + '" target="_blank" class="btn btn-sm btn-light border"><i class="fas fa-eye text-primary"></i></a></td>';
+                        html += '</tr>';
+                    });
+                    html += '</tbody></table>';
+                    container.html(html);
+                }
+            });
+        }
+    </script>
+}

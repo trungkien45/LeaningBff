@@ -1,13 +1,14 @@
-﻿namespace LearningBff.Dtos;
+namespace LearningBff.Dtos;
 
 public class CreateUpdateAnswerDto
 {
-    public string? Text { get; internal set; }
-    public bool IsCorrect { get; internal set; }
-    public int Order { get; internal set; }
+    public string? Text { get; set; }
+    public bool IsCorrect { get; set; }
+    public int Order { get; set; }
 }
 public class CreateAnswerDto : CreateUpdateAnswerDto
 {
+    public long Id { get; set; }
 }
 public class UpdateAnswerDto : CreateUpdateAnswerDto
 {

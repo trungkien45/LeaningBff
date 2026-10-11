@@ -65,6 +65,34 @@ public class ChappterTeacherAppService : TeacherBaseAppService
             CreationTime = c.CreationTime
         }).ToList(), totalCount);
     }
+
+    public async Task<List<ChapterDto>> GetCurriculumOfSubjectAsync(long subjectId)
+    {
+        Subject subject = await FindSubjectForTeacherAsync(subjectId);
+        var chapters = await (await _chapterRepository.GetQueryableAsync())
+            .Where(c => c.SubjectId == subjectId)
+            .Include(c => c.Lessons)
+            .OrderBy(c => c.CreationTime)
+            .ToListAsync();
+
+        return chapters.Select(c => new ChapterDto
+        {
+            Id = c.Id,
+            Name = c.Name,
+            Description = c.Description,
+            SubjectId = c.SubjectId,
+            CreationTime = c.CreationTime,
+            Lessons = c.Lessons.OrderBy(l => l.CreationTime).Select(l => new LessonDto
+            {
+                Id = l.Id,
+                Title = l.Title,
+                Content = l.Content,
+                ChapterId = l.ChapterId,
+                CreationTime = l.CreationTime
+            }).ToList()
+        }).ToList();
+    }
+
     public async Task<ChapterDto> GetChapterDetailAsync(long subjectId, long chapterId)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);

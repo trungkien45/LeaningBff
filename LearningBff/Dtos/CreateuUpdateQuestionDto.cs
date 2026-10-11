@@ -1,4 +1,5 @@
-﻿using LearningBff.Entities;
+using LearningBff.Entities;
+using LearningBff.Dtos;
 
 namespace LearningBff.Dtos
 {
@@ -10,6 +11,7 @@ namespace LearningBff.Dtos
         public string GeneralExplanation { get; set; } = string.Empty;
         public float DefaultScore { get; set; }
         public int Order { get; set; }
+        public List<CreateAnswerDto> Answers { get; set; } = new();
     }
     public class CreateQuestionDto : CreateuUpdateQuestionDto
     {
@@ -18,3 +20,4 @@ namespace LearningBff.Dtos
     {
     }
 }
+

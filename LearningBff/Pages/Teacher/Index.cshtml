@@ -549,6 +549,7 @@
                                     <th class="text-center">Lượt nộp</th>
                                     <th class="text-center">Điểm TB</th>
                                     <th>Tỷ lệ đạt</th>
+                                    <th class="text-end">Thao tác</th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -574,6 +575,16 @@
                                             <div class="pass-progress">
                                                 <div class="pass-progress-bar @(s.PassRate >= 70 ? "bg-success" : (s.PassRate >= 50 ? "bg-warning" : "bg-danger"))" 
                                                      style="width: @(s.PassRate)%"></div>
+                                            </div>
+                                        </td>
+                                        <td class="text-end">
+                                            <div class="btn-group btn-group-sm">
+                                                <a href="~/Teacher/Questions?subjectId=@s.SubjectId" class="btn btn-outline-primary" title="Ngân hàng câu hỏi của môn @s.SubjectName">
+                                                    <i class="fas fa-database me-1"></i> Câu hỏi
+                                                </a>
+                                                <a href="~/Teacher/Exams?subjectId=@s.SubjectId" class="btn btn-outline-purple" style="color: #6d28d9; border-color: #ddd6fe;" title="Quản lý đề thi của môn @s.SubjectName">
+                                                    <i class="fas fa-file-signature me-1"></i> Đề thi
+                                                </a>
                                             </div>
                                         </td>
                                     </tr>

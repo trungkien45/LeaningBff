@@ -1,0 +1,635 @@
+@page "/Teacher/Subjects"
+@model LearningBff.Pages.Teacher.SubjectsModel
+@{
+    ViewData["Title"] = "Môn học phụ trách - Giảng viên";
+}
+
+<style>
+    :root {
+        --teach-primary: #6366f1;
+        --teach-primary-dark: #4338ca;
+        --teach-accent: #0ea5e9;
+        --teach-bg: #f8fafc;
+        --teach-card-bg: #ffffff;
+        --teach-border: #e2e8f0;
+        --teach-text: #0f172a;
+        --teach-muted: #64748b;
+        --teach-success: #10b981;
+        --teach-warning: #f59e0b;
+        --teach-danger: #ef4444;
+    }
+
+    .teacher-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 1.5rem 1rem 3rem 1rem;
+    }
+
+    /* Hero Banner */
+    .teacher-hero {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 60%, #312e81 100%);
+        border-radius: 1.25rem;
+        padding: 2.25rem 2rem;
+        color: #ffffff;
+        margin-bottom: 2rem;
+        position: relative;
+        overflow: hidden;
+        box-shadow: 0 10px 25px -5px rgba(30, 27, 75, 0.3);
+    }
+    .teacher-hero::after {
+        content: '';
+        position: absolute;
+        top: -40%;
+        right: -10%;
+        width: 420px;
+        height: 420px;
+        background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, rgba(99, 102, 241, 0) 70%);
+        border-radius: 50%;
+        pointer-events: none;
+    }
+    .teacher-hero-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        background: rgba(99, 102, 241, 0.25);
+        border: 1px solid rgba(165, 180, 252, 0.3);
+        color: #c7d2fe;
+        font-size: 0.85rem;
+        font-weight: 600;
+        padding: 0.35rem 0.85rem;
+        border-radius: 9999px;
+        margin-bottom: 0.85rem;
+        backdrop-filter: blur(4px);
+    }
+    .teacher-hero-title {
+        font-size: 2rem;
+        font-weight: 800;
+        letter-spacing: -0.025em;
+        margin-bottom: 0.5rem;
+    }
+    .teacher-hero-subtitle {
+        color: #cbd5e1;
+        font-size: 1rem;
+        max-width: 750px;
+        margin-bottom: 1.5rem;
+        line-height: 1.6;
+    }
+    .hero-quick-actions {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.75rem;
+    }
+    .btn-hero-action {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.6rem 1.15rem;
+        border-radius: 0.65rem;
+        font-weight: 600;
+        font-size: 0.9rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+    .btn-hero-primary {
+        background: #6366f1;
+        color: #ffffff;
+        border: none;
+    }
+    .btn-hero-primary:hover {
+        background: #4f46e5;
+        color: #ffffff;
+        transform: translateY(-2px);
+    }
+    .btn-hero-light {
+        background: rgba(255, 255, 255, 0.12);
+        color: #ffffff;
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        backdrop-filter: blur(8px);
+    }
+    .btn-hero-light:hover {
+        background: rgba(255, 255, 255, 0.22);
+        color: #ffffff;
+        transform: translateY(-2px);
+    }
+
+    /* Stat Grid */
+    .stat-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 1.25rem;
+        margin-bottom: 2rem;
+    }
+    .stat-card {
+        background: var(--teach-card-bg);
+        border: 1px solid var(--teach-border);
+        border-radius: 1rem;
+        padding: 1.25rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        transition: all 0.2s ease;
+    }
+    .stat-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 10px 20px -3px rgba(0, 0, 0, 0.05);
+    }
+    .stat-icon {
+        width: 52px;
+        height: 52px;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.35rem;
+        flex-shrink: 0;
+    }
+    .stat-value {
+        font-size: 1.6rem;
+        font-weight: 800;
+        color: var(--teach-text);
+        line-height: 1.2;
+    }
+    .stat-label {
+        font-size: 0.85rem;
+        color: var(--teach-muted);
+        font-weight: 500;
+    }
+
+    /* Content Card */
+    .teach-card {
+        background: var(--teach-card-bg);
+        border: 1px solid var(--teach-border);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
+    }
+
+    /* Subject Cards Grid */
+    .subject-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.25rem;
+    }
+    .subject-item-card {
+        background: #ffffff;
+        border: 1px solid var(--teach-border);
+        border-radius: 1rem;
+        padding: 1.35rem;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        transition: all 0.25s ease;
+        position: relative;
+    }
+    .subject-item-card:hover {
+        transform: translateY(-4px);
+        border-color: #cbd5e1;
+        box-shadow: 0 12px 24px -6px rgba(0, 0, 0, 0.08);
+    }
+    .subject-card-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 0.75rem;
+        margin-bottom: 0.75rem;
+    }
+    .subject-title {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: var(--teach-text);
+        line-height: 1.35;
+        margin-bottom: 0.25rem;
+    }
+    .subject-desc {
+        color: var(--teach-muted);
+        font-size: 0.875rem;
+        line-height: 1.5;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+        margin-bottom: 1rem;
+        min-height: 2.6rem;
+    }
+    .subject-metrics {
+        display: grid;
+        grid-template-columns: repeat(3, 1fr);
+        gap: 0.5rem;
+        background: #f8fafc;
+        border: 1px solid #edf2f7;
+        border-radius: 0.75rem;
+        padding: 0.75rem 0.5rem;
+        margin-bottom: 1.25rem;
+        text-align: center;
+    }
+    .metric-item-val {
+        font-size: 1.15rem;
+        font-weight: 700;
+        color: #1e293b;
+    }
+    .metric-item-lbl {
+        font-size: 0.75rem;
+        color: #64748b;
+        font-weight: 500;
+    }
+    .subject-actions {
+        display: flex;
+        gap: 0.5rem;
+        flex-wrap: wrap;
+    }
+    .btn-sub-action {
+        flex: 1;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0.4rem;
+        padding: 0.55rem 0.75rem;
+        border-radius: 0.6rem;
+        font-size: 0.85rem;
+        font-weight: 600;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+    .btn-act-question {
+        background: #eff6ff;
+        color: #1d4ed8;
+        border: 1px solid #bfdbfe;
+    }
+    .btn-act-question:hover {
+        background: #dbeafe;
+        color: #1e40af;
+        transform: translateY(-1px);
+    }
+    .btn-act-exam {
+        background: #f5f3ff;
+        color: #6d28d9;
+        border: 1px solid #ddd6fe;
+    }
+    .btn-act-exam:hover {
+        background: #ede9fe;
+        color: #5b21b6;
+        transform: translateY(-1px);
+    }
+    .btn-act-curriculum {
+        background: #ecfdf5;
+        color: #047857;
+        border: 1px solid #a7f3d0;
+    }
+    .btn-act-curriculum:hover {
+        background: #d1fae5;
+        color: #065f46;
+        transform: translateY(-1px);
+    }
+    .badge-status {
+        font-size: 0.75rem;
+        padding: 0.25rem 0.65rem;
+        border-radius: 9999px;
+        font-weight: 600;
+        display: inline-flex;
+        align-items: center;
+        gap: 0.35rem;
+    }
+    .badge-status-active {
+        background: #dcfce7;
+        color: #15803d;
+        border: 1px solid #bbf7d0;
+    }
+    .badge-status-inactive {
+        background: #f1f5f9;
+        color: #64748b;
+        border: 1px solid #e2e8f0;
+    }
+
+    /* Modal */
+    .custom-modal-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(15, 23, 42, 0.6);
+        backdrop-filter: blur(4px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1050;
+        padding: 1rem;
+    }
+    .custom-modal-overlay.active {
+        display: flex;
+    }
+    .custom-modal-card {
+        background: #ffffff;
+        border-radius: 1rem;
+        max-width: 580px;
+        width: 100%;
+        overflow: hidden;
+        box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    }
+    .custom-modal-header {
+        padding: 1.25rem 1.5rem;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+    .custom-modal-body {
+        padding: 1.5rem;
+    }
+    .custom-modal-footer {
+        padding: 1rem 1.5rem;
+        background: #f8fafc;
+        border-top: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: flex-end;
+        gap: 0.75rem;
+    }
+</style>
+
+<div class="teacher-container">
+    <!-- Hero Banner -->
+    <div class="teacher-hero">
+        <div class="teacher-hero-badge">
+            <i class="fas fa-graduation-cap"></i>
+            <span>Không gian Giảng viên</span>
+        </div>
+        <h1 class="teacher-hero-title">Môn học phụ trách</h1>
+        <p class="teacher-hero-subtitle">
+            Quản lý các môn học được phân công. Bạn có thể nhanh chóng mở <strong>Ngân hàng câu hỏi</strong> hoặc <strong>Quản lý Đề thi</strong> riêng cho từng môn học để tạo đề kiểm tra và theo dõi học tập.
+        </p>
+
+        <div class="hero-quick-actions">
+            <a href="~/Teacher" class="btn-hero-action btn-hero-light">
+                <i class="fas fa-chart-line"></i>
+                <span>Bảng điều khiển</span>
+            </a>
+            <a href="~/Teacher/Questions" class="btn-hero-action btn-hero-primary">
+                <i class="fas fa-database"></i>
+                <span>Ngân hàng câu hỏi (Tất cả)</span>
+            </a>
+            <a href="~/Teacher/Exams" class="btn-hero-action btn-hero-light">
+                <i class="fas fa-file-alt"></i>
+                <span>Quản lý Đề thi (Tất cả)</span>
+            </a>
+        </div>
+    </div>
+
+    <!-- Alert Messages -->
+    @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+    {
+        <div class="alert alert-success alert-dismissible fade show d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert">
+            <i class="fas fa-check-circle fs-5"></i>
+            <div>@Model.SuccessMessage</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+    {
+        <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert">
+            <i class="fas fa-exclamation-triangle fs-5"></i>
+            <div>@Model.ErrorMessage</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+
+    <!-- Stat Grid -->
+    <div class="stat-grid">
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #e0e7ff; color: #4338ca;">
+                <i class="fas fa-book-open"></i>
+            </div>
+            <div>
+                <div class="stat-value">@Model.TotalCount</div>
+                <div class="stat-label">Môn học phụ trách</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #e0f2fe; color: #0284c7;">
+                <i class="fas fa-question-circle"></i>
+            </div>
+            <div>
+                <div class="stat-value">@Model.TotalQuestionsAllSubjects</div>
+                <div class="stat-label">Tổng số câu hỏi</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #fef3c7; color: #b45309;">
+                <i class="fas fa-file-signature"></i>
+            </div>
+            <div>
+                <div class="stat-value">@Model.TotalExamsAllSubjects</div>
+                <div class="stat-label">Tổng số đề thi</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon" style="background: #dcfce7; color: #15803d;">
+                <i class="fas fa-users"></i>
+            </div>
+            <div>
+                <div class="stat-value">@Model.TotalStudentsAllSubjects</div>
+                <div class="stat-label">Tổng lượt học viên</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Panel -->
+    <div class="teach-card">
+        <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-3">
+            <div>
+                <h2 class="h5 fw-bold mb-1 text-dark">
+                    <i class="fas fa-list text-primary me-2"></i>Danh sách môn học của bạn
+                </h2>
+                <p class="text-muted small mb-0">Quản lý môn học, khóa/mở đăng ký cho học viên hoặc truy cập nhanh câu hỏi và đề thi.</p>
+            </div>
+
+            <!-- Search bar -->
+            <form method="get" class="d-flex align-items-center gap-2" style="max-width: 360px; width: 100%;">
+                <div class="input-group input-group-sm">
+                    <span class="input-group-text bg-white border-end-0">
+                        <i class="fas fa-search text-muted"></i>
+                    </span>
+                    <input type="text" name="search" class="form-control border-start-0 ps-0" 
+                           placeholder="Tìm môn học theo tên..." value="@Model.Search">
+                    <button class="btn btn-primary" type="submit">Tìm kiếm</button>
+                    @if (!string.IsNullOrWhiteSpace(Model.Search))
+                    {
+                        <a href="~/Teacher/Subjects" class="btn btn-outline-secondary" title="Xóa bộ lọc">
+                            <i class="fas fa-times"></i>
+                        </a>
+                    }
+                </div>
+            </form>
+        </div>
+
+        @if (!Model.Subjects.Any())
+        {
+            <div class="text-center py-5">
+                <div style="font-size: 3rem; color: #cbd5e1; margin-bottom: 1rem;">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <h5 class="fw-bold text-secondary">Chưa tìm thấy môn học nào</h5>
+                <p class="text-muted small mb-3">
+                    @(string.IsNullOrWhiteSpace(Model.Search) ? "Bạn chưa được phân công môn học nào hoặc hệ thống đang cập nhật." : "Không có môn học nào khớp với từ khóa tìm kiếm của bạn.")
+                </p>
+                @if (!string.IsNullOrWhiteSpace(Model.Search))
+                {
+                    <a href="~/Teacher/Subjects" class="btn btn-sm btn-outline-primary">Xem tất cả môn học</a>
+                }
+            </div>
+        }
+        else
+        {
+            <!-- Subject Cards -->
+            <div class="subject-grid">
+                @foreach (var s in Model.Subjects)
+                {
+                    <div class="subject-item-card">
+                        <div>
+                            <div class="subject-card-header">
+                                <a href="~/Teacher/Curriculum?subjectId=@s.Id" class="text-decoration-none" title="Xem nội dung môn học">
+                                    <h3 class="subject-title text-primary">@s.Name</h3>
+                                </a>
+                                @if (s.IsActive)
+                                {
+                                    <span class="badge-status badge-status-active" title="Môn học đang mở cho học viên đăng ký">
+                                        <i class="fas fa-unlock"></i> Mở đăng ký
+                                    </span>
+                                }
+                                else
+                                {
+                                    <span class="badge-status badge-status-inactive" style="background: #fee2e2; color: #b91c1c; border-color: #fecaca;" title="Môn học đã khóa, học viên không thể đăng ký mới">
+                                        <i class="fas fa-lock"></i> Đã khóa đăng ký
+                                    </span>
+                                }
+                            </div>
+
+                            <p class="subject-desc" title="@s.Description">
+                                @(string.IsNullOrWhiteSpace(s.Description) ? "Chưa có mô tả cho môn học này." : s.Description)
+                            </p>
+
+                            <div class="subject-metrics">
+                                <div>
+                                    <div class="metric-item-val text-primary">@s.QuestionCount</div>
+                                    <div class="metric-item-lbl">Câu hỏi</div>
+                                </div>
+                                <div>
+                                    <div class="metric-item-val text-purple" style="color: #7c3aed;">@s.ExamCount</div>
+                                    <div class="metric-item-lbl">Đề thi</div>
+                                </div>
+                                <div>
+                                    <div class="metric-item-val text-success">@s.StudentCount</div>
+                                    <div class="metric-item-lbl">Học viên</div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="subject-actions">
+                            <a href="~/Teacher/Curriculum?subjectId=@s.Id" 
+                               class="btn-sub-action btn-act-curriculum"
+                               title="Xem và soạn giáo trình, chương, bài học cho môn @s.Name">
+                                <i class="fas fa-book-open"></i>
+                                <span>Nội dung</span>
+                            </a>
+                            <a href="~/Teacher/Questions?subjectId=@s.Id" 
+                               class="btn-sub-action btn-act-question"
+                               title="Quản lý ngân hàng câu hỏi của môn @s.Name">
+                                <i class="fas fa-database"></i>
+                                <span>Câu hỏi (@s.QuestionCount)</span>
+                            </a>
+                            <a href="~/Teacher/Exams?subjectId=@s.Id" 
+                               class="btn-sub-action btn-act-exam"
+                               title="Quản lý đề thi của môn @s.Name">
+                                <i class="fas fa-file-signature"></i>
+                                <span>Đề thi (@s.ExamCount)</span>
+                            </a>
+                            <a href="~/Learning?subjectId=@s.Id" 
+                               class="btn btn-sm btn-light border text-secondary"
+                               title="Vào giao diện lớp học trực tuyến">
+                                <i class="fas fa-chalkboard-teacher"></i>
+                            </a>
+                            <form method="post" asp-page-handler="ToggleStatus" class="d-inline mb-0" 
+                                  onsubmit="return confirm('@(s.IsActive ? $"Bạn có chắc muốn KHÓA đăng ký môn \"{s.Name}\"? Học viên sẽ không thể đăng ký mới môn này." : $"Bạn có chắc muốn MỞ LẠI đăng ký môn \"{s.Name}\" cho học viên?")');">
+                                <input type="hidden" name="subjectId" value="@s.Id" />
+                                <input type="hidden" name="search" value="@Model.Search" />
+                                <input type="hidden" name="currentPage" value="@Model.CurrentPage" />
+                                @if (s.IsActive)
+                                {
+                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Khóa môn học (ngăn học viên đăng ký mới)">
+                                        <i class="fas fa-lock"></i>
+                                    </button>
+                                }
+                                else
+                                {
+                                    <button type="submit" class="btn btn-sm btn-outline-success" title="Mở lại đăng ký môn học cho học viên">
+                                        <i class="fas fa-unlock"></i>
+                                    </button>
+                                }
+                            </form>
+                        </div>
+                    </div>
+                }
+            </div>
+
+            <!-- Phân trang -->
+            <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 pt-4 mt-3 border-top">
+                <div class="text-muted small">
+                    Hiển thị <span class="fw-semibold text-dark">@Model.StartIndex</span> - <span class="fw-semibold text-dark">@Model.EndIndex</span> trên tổng số <span class="fw-semibold text-dark">@Model.TotalCount</span> môn học
+                </div>
+
+                @if (Model.TotalPages > 1)
+                {
+                    <nav aria-label="Phân trang môn học">
+                        <ul class="pagination pagination-sm mb-0">
+                            <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" href="?currentPage=1&search=@Model.Search" title="Trang đầu">
+                                    <i class="fas fa-angles-left"></i>
+                                </a>
+                            </li>
+                            <li class="page-item @(Model.CurrentPage <= 1 ? "disabled" : "")">
+                                <a class="page-link" href="?currentPage=@(Model.CurrentPage - 1)&search=@Model.Search" title="Trang trước">
+                                    <i class="fas fa-angle-left"></i>
+                                </a>
+                            </li>
+
+                            @if (Model.StartPage > 1)
+                            {
+                                <li class="page-item"><a class="page-link" href="?currentPage=1&search=@Model.Search">1</a></li>
+                                @if (Model.StartPage > 2)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                            }
+
+                            @for (int p = Model.StartPage; p <= Model.EndPage; p++)
+                            {
+                                <li class="page-item @(p == Model.CurrentPage ? "active" : "")">
+                                    <a class="page-link" href="?currentPage=@p&search=@Model.Search">@p</a>
+                                </li>
+                            }
+
+                            @if (Model.EndPage < Model.TotalPages)
+                            {
+                                @if (Model.EndPage < Model.TotalPages - 1)
+                                {
+                                    <li class="page-item disabled"><span class="page-link">&hellip;</span></li>
+                                }
+                                <li class="page-item"><a class="page-link" href="?currentPage=@Model.TotalPages&search=@Model.Search">@Model.TotalPages</a></li>
+                            }
+
+                            <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="?currentPage=@(Model.CurrentPage + 1)&search=@Model.Search" title="Trang sau">
+                                    <i class="fas fa-angle-right"></i>
+                                </a>
+                            </li>
+                            <li class="page-item @(Model.CurrentPage >= Model.TotalPages ? "disabled" : "")">
+                                <a class="page-link" href="?currentPage=@Model.TotalPages&search=@Model.Search" title="Trang cuối">
+                                    <i class="fas fa-angles-right"></i>
+                                </a>
+                            </li>
+                        </ul>
+                    </nav>
+                }
+            </div>
+        }
+    </div>
+</div>

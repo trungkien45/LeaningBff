@@ -1,4 +1,4 @@
-﻿namespace LearningBff.Dtos;
+namespace LearningBff.Dtos;
 
 public class ChapterDto
 {
@@ -7,4 +7,5 @@ public class ChapterDto
     public string? Description { get; set; }
     public long SubjectId { get; set; }
     public DateTime CreationTime { get; set; }
+    public List<LessonDto> Lessons { get; set; } = new();
 }

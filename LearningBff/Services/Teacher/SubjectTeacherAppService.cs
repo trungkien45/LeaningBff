@@ -14,11 +14,11 @@ namespace LearningBff.Services.Teacher
         {
         }
 
-        public async Task<(List<SubjectDto> Items, int TotalCount)> GetMySubjectsAsync(string name, int page = 1, int pageSize = 10)
+        public async Task<(List<SubjectDto> Items, int TotalCount)> GetMySubjectsAsync(string? name = null, int page = 1, int pageSize = 10)
         {
             var userId = _currentUser.Id;
             var query = (await _subjectRepository.GetQueryableAsync())
-                .Where(s => s.Teachers.Any(t => t.Id == userId) && s.Name.Contains(name));
+                .Where(s => s.Teachers.Any(t => t.Id == userId) && (string.IsNullOrEmpty(name) || s.Name.Contains(name)));
 
             var totalCount = await query.CountAsync();
 
@@ -60,6 +60,21 @@ namespace LearningBff.Services.Teacher
                 ExamCount = subject.Exams.Count,
                 StudentCount = subject.EnrollmentSubjects.Count(e => e.IsActive),
             };
+        }
+
+        public async Task<bool> ToggleSubjectStatusAsync(long subjectId)
+        {
+            Subject subject = await FindSubjectForTeacherAsync(subjectId);
+            subject.IsActive = !subject.IsActive;
+            await _subjectRepository.UpdateAsync(subject, autoSave: true);
+            return subject.IsActive;
+        }
+
+        public async Task SetSubjectStatusAsync(long subjectId, bool isActive)
+        {
+            Subject subject = await FindSubjectForTeacherAsync(subjectId);
+            subject.IsActive = isActive;
+            await _subjectRepository.UpdateAsync(subject, autoSave: true);
         }
 
 
