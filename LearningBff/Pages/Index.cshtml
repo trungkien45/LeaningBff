@@ -52,6 +52,17 @@
                             <i class="fa-solid fa-gauge-high me-2"></i>Khu vực Quản lý của Giảng viên
                         </a>
                     </div>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap mt-2">
+                        <a href="/Teacher/Subjects" class="btn btn-outline-primary btn-md px-4 fw-semibold">
+                            <i class="fa-solid fa-book me-2"></i>Môn học
+                        </a>
+                        <a href="/Teacher/Questions" class="btn btn-outline-primary btn-md px-4 fw-semibold">
+                            <i class="fa-solid fa-circle-question me-2"></i>Câu hỏi
+                        </a>
+                        <a href="/Teacher/Exams" class="btn btn-outline-primary btn-md px-4 fw-semibold">
+                            <i class="fa-solid fa-file-alt me-2"></i>Đề thi
+                        </a>
+                    </div>
                 </div>
             }
             @if (CurrentUser.IsInRole("admin") || CurrentUser.IsInRole("Admin"))
@@ -63,6 +74,11 @@
                     <div class="d-flex justify-content-center gap-3 flex-wrap">
                         <a href="/Admin" class="btn btn-warning btn-md px-4 fw-bold">
                             <i class="fa-solid fa-gauge-high me-2"></i>Khu vực Quản lý của Quản trị viên
+                        </a>
+                    </div>
+                    <div class="d-flex justify-content-center gap-3 flex-wrap mt-2">
+                        <a href="/Admin/Subjects" class="btn btn-outline-primary btn-md px-4 fw-semibold">
+                            <i class="fa-solid fa-book-bookmark me-2"></i>Quản lý môn học và giảng viên
                         </a>
                     </div>
                 </div>

@@ -99,38 +99,29 @@ public class QuestionsModel : AbpPageModel
         TypeFilter = typeFilter;
         CurrentPage = currentPage < 1 ? 1 : currentPage;
 
-        if (SubjectId.HasValue && SubjectId.Value > 0)
+        try
         {
-            try
+            if (SubjectId.HasValue && SubjectId.Value > 0)
             {
                 CurrentSubject = await _subjectTeacherAppService.GetSubjectDetailAsync(SubjectId.Value);
-
-                var (items, count) = await _questionBankTeacherAppService.GetQuestionsOfSubjectAsync(
-                    SubjectId.Value,
-                    Search ?? string.Empty,
-                    CurrentPage,
-                    PageSize
-                );
-
-                // In-memory filter for Difficulty / Type if specified
-                var query = items.AsEnumerable();
-                if (DifficultyFilter.HasValue)
-                {
-                    query = query.Where(q => q.Difficulty == DifficultyFilter.Value);
-                }
-                if (TypeFilter.HasValue)
-                {
-                    query = query.Where(q => q.Type == TypeFilter.Value);
-                }
-
-                Questions = query.ToList();
-                TotalCount = count;
-                TotalPages = PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 1;
             }
-            catch (Exception ex)
-            {
-                ErrorMessage = ex.Message;
-            }
+
+            var (items, count) = await _questionBankTeacherAppService.GetQuestionsOfSubjectAsync(
+                SubjectId,
+                Search ?? string.Empty,
+                CurrentPage,
+                PageSize,
+                DifficultyFilter,
+                TypeFilter
+            );
+
+            Questions = items;
+            TotalCount = count;
+            TotalPages = PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 1;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
         }
     }
 

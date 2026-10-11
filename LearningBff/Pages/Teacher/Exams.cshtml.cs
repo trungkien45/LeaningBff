@@ -88,27 +88,27 @@ public class ExamsModel : AbpPageModel
         Search = search;
         CurrentPage = currentPage < 1 ? 1 : currentPage;
 
-        if (SubjectId.HasValue && SubjectId.Value > 0)
+        try
         {
-            try
+            if (SubjectId.HasValue && SubjectId.Value > 0)
             {
                 CurrentSubject = await _subjectTeacherAppService.GetSubjectDetailAsync(SubjectId.Value);
-
-                var (items, count) = await _examTeacherAppService.GetExamsOfSubjectAsync(
-                    SubjectId.Value,
-                    Search ?? string.Empty,
-                    CurrentPage,
-                    PageSize
-                );
-
-                Exams = items;
-                TotalCount = count;
-                TotalPages = PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 1;
             }
-            catch (Exception ex)
-            {
-                ErrorMessage = ex.Message;
-            }
+
+            var (items, count) = await _examTeacherAppService.GetExamsOfSubjectAsync(
+                SubjectId,
+                Search ?? string.Empty,
+                CurrentPage,
+                PageSize
+            );
+
+            Exams = items;
+            TotalCount = count;
+            TotalPages = PageSize > 0 ? (int)Math.Ceiling((double)TotalCount / PageSize) : 1;
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
         }
     }
 
@@ -142,21 +142,29 @@ public class ExamsModel : AbpPageModel
         }
     }
 
-    public async Task<IActionResult> OnGetExamQuestionsJsonAsync(long subjectId, long examId)
+    public async Task<IActionResult> OnGetExamQuestionsJsonAsync(long subjectId, long examId, int page = 1, int pageSize = 10, string? search = null)
     {
         try
         {
+            page = Math.Max(1, page);
+            pageSize = Math.Clamp(pageSize, 1, 100);
             var examDetail = await _examTeacherAppService.GetExamWithQuestionsAsync(subjectId, examId);
-            var (allQuestions, _) = await _questionBankTeacherAppService.GetQuestionsOfSubjectAsync(subjectId, pageSize: 200);
-
-            var existingQuestionIds = examDetail.Questions.Select(q => q.Id).ToHashSet();
-            var availableQuestions = allQuestions.Where(q => !existingQuestionIds.Contains(q.Id)).ToList();
+            var (availableQuestions, totalCount) = await _questionBankTeacherAppService.GetAvailableQuestionsForExamAsync(
+                subjectId,
+                examId,
+                search ?? string.Empty,
+                page,
+                pageSize);
 
             return new JsonResult(new
             {
                 success = true,
                 examQuestions = examDetail.Questions,
-                availableQuestions
+                availableQuestions,
+                totalCount,
+                currentPage = page,
+                pageSize,
+                maxScore = examDetail.MaxScore
             });
         }
         catch (Exception ex)
@@ -280,12 +288,16 @@ public class ExamsModel : AbpPageModel
         return RedirectToPage(new { subjectId, search, currentPage });
     }
 
-    public async Task<IActionResult> OnPostUnpublishExamAsync(long subjectId, long examId, string? search = null, int currentPage = 1)
+    public async Task<IActionResult> OnPostUnpublishExamAsync(
+        long subjectId,
+        long examId,
+        string? search = null,
+        int currentPage = 1)
     {
         try
         {
             await _examTeacherAppService.UnpublishExamAsync(subjectId, examId);
-            SuccessMessage = "Đã chuyển đề thi về trạng thái Bản nháp.";
+            SuccessMessage = "Đã gỡ xuất bản đề thi và xóa các lượt làm bài (nếu có).";
         }
         catch (Exception ex)
         {
@@ -310,12 +322,25 @@ public class ExamsModel : AbpPageModel
         return RedirectToPage(new { subjectId, search, currentPage });
     }
 
-    public async Task<IActionResult> OnPostAddQuestionAsync(long subjectId, long examId, long questionId)
+    public async Task<IActionResult> OnPostAddQuestionAsync(long subjectId, long examId, long questionId, float score)
     {
         try
         {
-            await _examTeacherAppService.AddQuestionToExamAsync(subjectId, examId, questionId);
-            return new JsonResult(new { success = true });
+            var scoreSummary = await _examTeacherAppService.AddQuestionToExamAsync(subjectId, examId, questionId, score);
+            return new JsonResult(new { success = true, scoreSummary });
+        }
+        catch (Exception ex)
+        {
+            return new JsonResult(new { success = false, message = ex.Message });
+        }
+    }
+
+    public async Task<IActionResult> OnPostUpdateQuestionScoreAsync(long subjectId, long examId, long questionId, float score)
+    {
+        try
+        {
+            var scoreSummary = await _examTeacherAppService.UpdateExamQuestionScoreAsync(subjectId, examId, questionId, score);
+            return new JsonResult(new { success = true, scoreSummary });
         }
         catch (Exception ex)
         {
@@ -327,8 +352,8 @@ public class ExamsModel : AbpPageModel
     {
         try
         {
-            await _examTeacherAppService.RemoveQuestionFromExamAsync(subjectId, examId, questionId);
-            return new JsonResult(new { success = true });
+            var scoreSummary = await _examTeacherAppService.RemoveQuestionFromExamAsync(subjectId, examId, questionId);
+            return new JsonResult(new { success = true, scoreSummary });
         }
         catch (Exception ex)
         {

@@ -542,12 +542,12 @@
                                 <i class="fas fa-file-signature"></i>
                                 <span>Đề thi (@s.ExamCount)</span>
                             </a>
-                            <a href="~/Learning?subjectId=@s.Id" 
+@*                             <a href="~/Learning?subjectId=@s.Id" 
                                class="btn btn-sm btn-light border text-secondary"
                                title="Vào giao diện lớp học trực tuyến">
                                 <i class="fas fa-chalkboard-teacher"></i>
                             </a>
-                            <form method="post" asp-page-handler="ToggleStatus" class="d-inline mb-0" 
+ *@                            <form method="post" asp-page-handler="ToggleStatus" class="d-inline mb-0" 
                                   onsubmit="return confirm('@(s.IsActive ? $"Bạn có chắc muốn KHÓA đăng ký môn \"{s.Name}\"? Học viên sẽ không thể đăng ký mới môn này." : $"Bạn có chắc muốn MỞ LẠI đăng ký môn \"{s.Name}\" cho học viên?")');">
                                 <input type="hidden" name="subjectId" value="@s.Id" />
                                 <input type="hidden" name="search" value="@Model.Search" />

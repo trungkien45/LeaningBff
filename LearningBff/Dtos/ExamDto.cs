@@ -56,8 +56,19 @@ public class ExamDto
     public string Title { get; set; } = string.Empty;
     public string? Description { get; set; }
     public long SubjectId { get; set; }
+    public string SubjectName { get; set; } = string.Empty;
     public DateTime CreationTime { get; set; }
+    public bool IsPublished { get; set; }
+    public int AttemptsUsed { get; set; }
 }
+
+public class ExamQuestionScoreSummaryDto
+{
+    public float TotalScore { get; set; }
+    public float MaxScore { get; set; }
+    public bool IsValid { get; set; }
+}
+
 public class ExamTakeDto
 {
     public long ExamResultId { get; set; }

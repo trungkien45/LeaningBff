@@ -19,6 +19,12 @@ public abstract class TeacherBaseAppService : LearningBffAppService
         _currentUser = currentUser;
     }
 
+    protected async Task<IQueryable<Subject>> GetQueryableSubjectsForTeacherAsync()
+    {
+        var userId = _currentUser.Id;
+        var subjects = await _subjectRepository.GetQueryableAsync();
+        return subjects.Where(s => s.Teachers.Any(t => t.Id == userId));
+    }
     protected async Task<Subject> FindSubjectForTeacherAsync(long subjectId)
     {
         var userId = _currentUser.Id;
