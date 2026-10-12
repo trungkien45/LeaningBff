@@ -1,10 +1,14 @@
-using LearningBff.Entities;
+using ClosedXML.Excel;
 using LearningBff.Dtos;
+using LearningBff.Entities;
 using Microsoft.EntityFrameworkCore;
+using System.IO.Compression;
+using System.Linq;
+using Volo.Abp;
 using Volo.Abp.Authorization;
 using Volo.Abp.Domain.Repositories;
 using Volo.Abp.Users;
-using System.Linq;
+using static LearningBff.Permissions.LearningBffPermissions;
 
 namespace LearningBff.Services.Teacher;
 
@@ -198,6 +202,198 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             Order = question.Order,
         };
     }
+    public async Task<ImportQuestionResultDto> ImportQuestion(ImportQuestionDto importQuestionDto)
+    {
+        Subject subject = await FindSubjectForTeacherAsync(importQuestionDto.SubjectId);
+        if (importQuestionDto.File == null || importQuestionDto.File.Length == 0)
+        {
+            throw new UserFriendlyException("Vui lòng chọn tệp Excel để nhập câu hỏi.");
+        }
+        using var memoryStream = new MemoryStream(importQuestionDto.File.GetAllBytes());
+        if (!IsExcelStream(memoryStream))
+        {
+            throw new UserFriendlyException("Tệp được chọn không phải là tệp Excel hợp lệ.");
+        }
+        memoryStream.Position = 0;
+        using var workbook = new XLWorkbook(memoryStream);
+        var worksheet = workbook.Worksheet(1);
+
+        var questionList = new List<Question>();
+        var result = new ImportQuestionResultDto
+        {
+            TotalQuestions = 0,
+            ImportedQuestions = 0,
+            Errors = new List<string>()
+        };
+        foreach (var row in worksheet.RowsUsed().Skip(1))
+        {
+            result.TotalQuestions++;
+            var rowNumber = row.RowNumber();
+
+            var question = row.Cell(1).GetString();
+            var typeStr = row.Cell(2).GetString();
+            if (string.IsNullOrWhiteSpace(question))
+            {
+                result.Errors.Add($"Dòng {rowNumber} không có tiêu đề câu hỏi.");
+                continue;
+            }
+            var type = typeStr switch
+            {
+                "1 đáp án" => QuestionType.Single,
+                "nhiều đáp án" => QuestionType.Multi,
+                _ => (QuestionType?)null
+            };
+            if (type == null)
+            {
+                result.Errors.Add($"Dòng {rowNumber} có kiểu câu hỏi không hợp lệ.");
+                continue;
+            }
+            var questionEntity = new Question
+            {
+                SubjectId = importQuestionDto.SubjectId,
+                Type = type.Value,
+                Difficulty = QuestionDifficulty.Medium, // Default difficulty, adjust as needed
+                Title = question,
+                DefaultScore = 1 // Default score, adjust as needed
+            };
+            var lastCell = row.LastCellUsed();
+            if (lastCell == null || lastCell.Address.ColumnNumber < 3)
+            {
+                result.Errors.Add($"Dòng {rowNumber} không có đáp án nào.");
+                continue;
+            }
+
+            var correctCount = row.Cells(3, lastCell.Address.ColumnNumber)
+                .Count(c => IsCorrectAnswerCell(c));
+
+            if (questionEntity.Type == QuestionType.Single && correctCount != 1)
+            {
+                result.Errors.Add($"Dòng {rowNumber} là câu hỏi loại 'Một đáp án đúng' nhưng có {correctCount} đáp án đúng.");
+                continue;
+            }
+
+            if (correctCount == 0)
+            {
+                result.Errors.Add($"Dòng {rowNumber} không có đáp án đúng nào.");
+                continue;
+            }
+
+            for (int col = 3; col <= lastCell.Address.ColumnNumber; col++)
+            {
+                var cell = row.Cell(col);
+
+                if (cell.IsEmpty())
+                    continue;
+
+                var answerText = cell.GetString();
+                if (string.IsNullOrWhiteSpace(answerText))
+                {
+                    result.Errors.Add($"Dòng {rowNumber}, cột {col} có đáp án trống.");
+                    continue;
+                }
+                var answerEntity = new Answer
+                {
+                    Text = answerText,
+                    IsCorrect = IsCorrectAnswerCell(cell),
+                    Order = col - 3 // Assuming answers start from column 3
+                };
+
+                questionEntity.Answers.Add(answerEntity);
+            }
+
+            if (questionEntity.Answers.Count == 0)
+            {
+                result.Errors.Add($"Dòng {rowNumber} không có đáp án hợp lệ nào.");
+                continue;
+            }
+
+            questionList.Add(questionEntity);
+            result.ImportedQuestions++;
+        }
+        if (questionList.Count > 0)
+        {
+            await _questionRepository.InsertManyAsync(questionList, autoSave: true);
+        }
+
+        return result;
+    }
+
+    public static bool IsExcelStream(Stream stream)
+    {
+        if (!stream.CanRead || !stream.CanSeek)
+        {
+            return false;
+        }
+
+        var originalPosition = stream.Position;
+
+        try
+        {
+            stream.Position = 0;
+            var header = new byte[8];
+            var bytesRead = stream.Read(header, 0, header.Length);
+            if (bytesRead < 4)
+            {
+                return false;
+            }
+
+            if (HasXlsSignature(header, bytesRead))
+            {
+                return true;
+            }
+
+            if (!HasZipSignature(header, bytesRead))
+            {
+                return false;
+            }
+
+            stream.Position = 0;
+            using var archive = new ZipArchive(stream, ZipArchiveMode.Read, leaveOpen: true);
+            return archive.Entries.Any(entry =>
+                string.Equals(entry.FullName, "xl/workbook.xml", StringComparison.OrdinalIgnoreCase));
+        }
+        catch
+        {
+            return false;
+        }
+        finally
+        {
+            stream.Position = originalPosition;
+        }
+    }
+    private static bool HasXlsSignature(byte[] header, int bytesRead)
+    {
+        return bytesRead >= 8 &&
+               header[0] == 0xD0 &&
+               header[1] == 0xCF &&
+               header[2] == 0x11 &&
+               header[3] == 0xE0 &&
+               header[4] == 0xA1 &&
+               header[5] == 0xB1 &&
+               header[6] == 0x1A &&
+               header[7] == 0xE1;
+    }
+
+    private static bool HasZipSignature(byte[] header, int bytesRead)
+    {
+        if (bytesRead < 4)
+        {
+            return false;
+        }
+
+        return header[0] == 0x50 && header[1] == 0x4B && (
+            (header[2] == 0x03 && header[3] == 0x04) || // Local file header
+            (header[2] == 0x05 && header[3] == 0x06) || // End of central directory record
+            (header[2] == 0x07 && header[3] == 0x08)    // Data descriptor
+        );
+    }
+
+    private static bool IsCorrectAnswerCell(IXLCell cell)
+    {
+        var color = cell.Style.Fill.BackgroundColor;
+        return color.ColorType == XLColorType.Color && (color.Color.ToArgb() != XLColor.NoColor.Color.ToArgb() || color.Color.ToArgb() != XLColor.White.Color.ToArgb());
+    }
+
     public async Task<QuestionDto> UpdateQuestionAsync(long subjectId, long questionId, UpdateQuestionDto input)
     {
         Subject subject = await FindSubjectForTeacherAsync(subjectId);
@@ -209,9 +405,9 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             throw new AbpAuthorizationException("Không tìm thấy câu hỏi hoặc bạn không có quyền truy cập.");
         }
         await EnsureQuestionIsNotInPublishedExamAsync(questionId);
-        if (await _questionRepository.AnyAsync(q => q.SubjectId == subjectId && q.Title == input.Title && q.Id != questionId))
+        if (await _questionRepository.AnyAsync(q => q.SubjectId == subjectId && q.Title == input.Title && q.Id != questionId && q.Type == input.Type))
         {
-            throw new AbpAuthorizationException("Đã tồn tại câu hỏi với tiêu đề này trong môn học.");
+            throw new AbpAuthorizationException("Đã tồn tại câu hỏi với tiêu đề và loại này trong môn học.");
         }
         if (input.DefaultScore < 0)
         {

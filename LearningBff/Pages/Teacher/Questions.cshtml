@@ -371,6 +371,9 @@
                 <div class="d-flex gap-2">
                     @if (Model.CurrentSubject != null)
                     {
+                        <button type="button" class="btn btn-outline-success fw-semibold" onclick="openModal('importQuestionModal')">
+                            <i class="fas fa-file-import me-1"></i> Import câu hỏi
+                        </button>
                         <button type="button" class="btn btn-primary fw-semibold" onclick="openCreateQuestionModal()">
                             <i class="fas fa-plus me-1"></i> Thêm câu hỏi mới
                         </button>
@@ -472,15 +475,11 @@
                                         @if (q.Answers.Any())
                                         {
                                             <div class="mt-1">
-                                                @foreach (var a in q.Answers.Take(4))
+                                                @foreach (var a in q.Answers)
                                                 {
                                                     <span class="badge @(a.IsCorrect ? "bg-success" : "bg-light text-dark border") me-1 mb-1" style="font-weight:500;font-size:.75rem;">
                                                         @(a.IsCorrect ? "✓" : "○") @(a.Text.Length > 40 ? a.Text[..40] + "..." : a.Text)
                                                     </span>
-                                                }
-                                                @if (q.Answers.Count > 4)
-                                                {
-                                                    <span class="text-muted small">+@(q.Answers.Count - 4) nữa</span>
                                                 }
                                             </div>
                                         }
@@ -582,6 +581,43 @@
 {
     @if (Model.CurrentSubject != null)
     {
+    <div class="custom-modal-overlay" id="importQuestionModal">
+        <div class="custom-modal-card" style="max-width: 600px;">
+            <div class="custom-modal-header">
+                <h5 class="fw-bold mb-0 text-dark">
+                    <i class="fas fa-file-import text-success me-2"></i> Import câu hỏi từ Excel
+                </h5>
+                <button type="button" class="btn-close" onclick="closeModal('importQuestionModal')" aria-label="Đóng"></button>
+            </div>
+            <form method="post" asp-page-handler="ImportQuestion" enctype="multipart/form-data">
+                <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
+                <input type="hidden" name="search" value="@Model.Search" />
+                <input type="hidden" name="currentPage" value="@Model.CurrentPage" />
+
+                <div class="custom-modal-body">
+                    <p class="text-muted mb-3">
+                        Chọn tệp Excel theo mẫu để thêm câu hỏi vào môn
+                        <strong>@Model.CurrentSubject.Name</strong>.
+                    </p>
+                    <div class="mb-3">
+                        <label for="questionImportFile" class="form-label fw-semibold">Tệp Excel (.xlsx) <span class="text-danger">*</span></label>
+                        <input type="file" id="questionImportFile" name="file" class="form-control" accept=".xlsx" required />
+                    </div>
+                    <a href="/templates/question-import-template.xlsx" download>
+                        <i class="fas fa-file-excel"></i> Tải template import câu hỏi (Excel)
+                                            </a>
+                </div>
+
+                <div class="custom-modal-footer">
+                    <button type="button" class="btn btn-secondary" onclick="closeModal('importQuestionModal')">Hủy</button>
+                    <button type="submit" class="btn btn-success fw-semibold">
+                        <i class="fas fa-upload me-1"></i> Import câu hỏi
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <div class="custom-modal-overlay" id="createQuestionModal">
         <div class="custom-modal-card">
             <div class="custom-modal-header">
@@ -637,7 +673,6 @@
                             </button>
                         </div>
                         <div id="createAnswersContainer"></div>
-                        <div class="text-muted small mt-1"><i class="fas fa-info-circle me-1"></i>Đánh dấu checkbox để chọn đáp án đúng. Cần ít nhất 2 phương án.</div>
                     </div>
                 </div>
 

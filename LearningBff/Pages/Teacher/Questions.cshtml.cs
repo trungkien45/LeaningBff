@@ -255,6 +255,34 @@ public class QuestionsModel : AbpPageModel
         return RedirectToPage(new { subjectId, search, currentPage });
     }
 
+    public async Task<IActionResult> OnPostImportQuestionAsync(
+        long subjectId,
+        Microsoft.AspNetCore.Http.IFormFile file,
+        string? search = null,
+        int currentPage = 1)
+    {
+        try
+        {
+            var result = await _questionBankTeacherAppService.ImportQuestion(new ImportQuestionDto
+            {
+                SubjectId = subjectId,
+                File = file
+            });
+
+            SuccessMessage = $"Import hoàn tất: đã nhập {result.ImportedQuestions}/{result.TotalQuestions} câu hỏi.";
+            if (result.Errors.Count > 0)
+            {
+                ErrorMessage = string.Join(Environment.NewLine, result.Errors);
+            }
+        }
+        catch (Exception ex)
+        {
+            ErrorMessage = ex.Message;
+        }
+
+        return RedirectToPage(new { subjectId, search, currentPage });
+    }
+
     public async Task<IActionResult> OnPostCreateAnswerAsync(
         long subjectId,
         long questionId,
