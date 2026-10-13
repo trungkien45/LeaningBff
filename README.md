@@ -1,80 +1,112 @@
 # LearningBff
 
-## About this solution
+Ứng dụng web hỗ trợ quản lý và học tập theo môn học. Giáo viên có thể quản lý môn học, chương trình học, ngân hàng câu hỏi và đề thi; học viên có thể xem nội dung học, làm bài thi và xem kết quả. Dự án được xây dựng trên ABP Framework theo mô hình single-layer.
 
-This is a minimalist, non-layered startup solution with the ABP Framework. All the fundamental ABP modules are already installed. Check the [Application (Single Layer) Startup Template](https://abp.io/docs/latest/solution-templates/application-single-layer) documentation for more info.
+## Công nghệ
 
-### Pre-requirements
+- .NET 10
+- ABP Framework 10.6
+- ASP.NET Core MVC / Razor Pages
+- Entity Framework Core và PostgreSQL
+- Docker Compose (tùy chọn)
 
-* [.NET10.0+ SDK](https://dotnet.microsoft.com/download/dotnet)
-* [Node v18 or 20](https://nodejs.org/en)
+## Chạy bằng Docker Compose
 
-### Configurations
+Yêu cầu đã cài Docker Desktop hoặc Docker Engine có Docker Compose.
 
-The solution comes with a default configuration that works out of the box. However, you may consider to change the following configuration before running your solution:
+Từ thư mục gốc repository, chạy:
 
-* Check the `ConnectionStrings` in `appsettings.json` file under the `LearningBff` project and change it if you need.
-
-### Solution structure
-
-This is a single-layer application that consists of the following projects:
-
-* `LearningBff`: ASP.NET Core MVC / Razor Pages application that contains all the application logic.
-
-## Before running the application
-
-### Generating a Signing Certificate
-
-In the production environment, you need to use a production signing certificate. ABP Framework sets up signing and encryption certificates in your application and expects an `openiddict.pfx` file in your application.
-
-This certificate is already generated when you created the solution, so most of the time you don't need to generate it yourself. However, if you need to generate a certificate, you can use the following command:
-
-```bash
-dotnet dev-certs https -v -ep openiddict.pfx -p 65563444-1e46-44cd-9169-1d5bbe0b3dab
+```powershell
+docker compose up --build
 ```
 
-> `65563444-1e46-44cd-9169-1d5bbe0b3dab` is the password of the certificate, you can change it to any password you want.
+Compose sẽ khởi động PostgreSQL, chờ database sẵn sàng, chạy migration, sau đó khởi động ứng dụng. Mở [http://localhost:8080](http://localhost:8080) để truy cập. Endpoint kiểm tra sức khỏe là [http://localhost:8080/health-status](http://localhost:8080/health-status).
 
-It is recommended to use **two** RSA certificates, distinct from the certificate(s) used for HTTPS: one for encryption, one for signing.
+Dừng các container:
 
-For more information, please refer to: [OpenIddict Certificate Configuration](https://documentation.openiddict.com/configuration/encryption-and-signing-credentials.html#registering-a-certificate-recommended-for-production-ready-scenarios)
+```powershell
+docker compose down
+```
 
-> Also, see the [Configuring OpenIddict](https://abp.io/docs/latest/Deployment/Configuring-OpenIddict#production-environment) documentation for more information.
+Dữ liệu PostgreSQL được lưu trong thư mục `postgres-data` ở repository root nên vẫn còn sau khi dừng container. Chỉ xóa dữ liệu này khi bạn thực sự muốn khởi tạo lại database.
 
-### Install Client-Side libraries
+## Chạy local
 
-Run the following command in your solution directory. This step is automatically done when you create a new solution, if you didn't especially disabled it. However, you should run it yourself if you have first cloned this solution from your source control, or added a new client-side package dependency to your solution.
+Yêu cầu:
+
+- .NET 10 SDK
+- PostgreSQL đang chạy và có database mà ứng dụng được phép sử dụng
+
+1. Cấu hình connection string qua biến môi trường (hoặc trong `LearningBff/appsettings.json`). Thay giá trị mẫu bên dưới bằng thông tin database local của bạn:
+
+   ```powershell
+   $env:ConnectionStrings__Default = "Host=localhost;Port=5432;Database=LearningBff;Username=postgres;Password=<your-password>"
+   ```
+
+2. Chạy ứng dụng từ thư mục gốc:
+
+   ```powershell
+   dotnet run --project LearningBff/LearningBff.csproj
+   ```
+
+Ứng dụng tự áp dụng migration và dữ liệu seed khi khởi động. Để chạy migration riêng:
+
+```powershell
+.\migrate-database.ps1
+```
+
+Địa chỉ local mặc định được cấu hình trong `LearningBff/appsettings.json` và `etc/run-profiles/Default.abprun.json`. Nếu thay đổi URL hoặc cổng, hãy cập nhật các giá trị URL liên quan như `App:SelfUrl` và `AuthServer:Authority` cho đồng nhất.
+
+## Cấu hình và bảo mật
+
+- Các thiết lập có thể được ghi đè bằng biến môi trường theo quy ước cấu hình của .NET, ví dụ `ConnectionStrings__Default`.
+- Không đưa mật khẩu database, Google OAuth client secret, passphrase hoặc private certificate vào Git. Dùng user-secrets, biến môi trường hoặc secret store của môi trường triển khai.
+- `openiddict.pfx` và chứng chỉ HTTPS phục vụ phát triển không nên được xem là chứng chỉ production. Xem phần [Chứng chỉ OpenIddict](#chứng-chỉ-openiddict) khi chuẩn bị triển khai thật.
+
+## Cấu trúc chính
+
+- `LearningBff/` — ứng dụng ASP.NET Core và các module ABP.
+- `LearningBff/Pages/` — các trang Razor cho học viên, giáo viên và quản trị.
+- `LearningBff/Services/` — dịch vụ nghiệp vụ cho môn học, bài học, đề thi và ngân hàng câu hỏi.
+- `LearningBff/Entities/` và `LearningBff/Data/` — entity, DbContext và migration database.
+- `etc/run-profiles/` — cấu hình run profile cho ABP Studio.
+- `Dockerfile`, `docker-compose.yml` — đóng gói và chạy ứng dụng cùng PostgreSQL.
+
+## Thông tin từ template ABP
+
+Các hướng dẫn dưới đây giữ lại thông tin nền tảng của template ABP single-layer và được điều chỉnh để khớp với cấu hình hiện tại của repository.
+
+### Về solution
+
+Đây là ứng dụng single-layer, không chia thành nhiều project layer. Các module nền tảng của ABP đã được cài đặt. Tham khảo tài liệu [Application (Single Layer) Startup Template](https://abp.io/docs/latest/solution-templates/application-single-layer) để biết thêm.
+
+### Cài thư viện client-side
+
+Sau khi clone repository hoặc thêm package client-side mới, chạy lệnh sau từ thư mục chứa solution nếu cần khôi phục các thư viện UI:
 
 ```bash
 abp install-libs
 ```
 
-> This command installs all NPM packages for MVC/Razor Pages and Blazor Server UIs and this command is already run by the ABP CLI, so most of the time you don't need to run this command manually.
+Lệnh này cần ABP CLI và Node.js. Dockerfile hiện tại cài Node.js 24 trong bước build và chạy lệnh này tự động.
 
-## Deploying the application
+### Chứng chỉ OpenIddict
 
-Deploying an ABP application follows the same process as deploying any .NET or ASP.NET Core application. However, there are important considerations to keep in mind. For detailed guidance, refer to ABP's [deployment documentation](https://abp.io/docs/latest/Deployment/Index).
+Ở môi trường production, nên cấu hình chứng chỉ ký và mã hóa phù hợp; không dùng chứng chỉ phát triển hay passphrase mẫu. ABP/OpenIddict đọc file `openiddict.pfx` cùng cấu hình `AuthServer:CertificatePassPhrase` khi cần chứng chỉ production. Chứng chỉ và passphrase phải được cung cấp an toàn cho môi trường triển khai, không commit vào source control.
 
-### How to deploy on Docker
+Ví dụ tạo chứng chỉ HTTPS phát triển (không thay thế quy trình cấp chứng chỉ production):
 
-The application provides the related `Dockerfiles` and `docker-compose` file with scripts. You can build the docker images and run them using docker-compose. The necessary database, DbMigrator, and the application will be running on docker with health checks in an isolated docker network.
+```bash
+dotnet dev-certs https -v -ep openiddict.pfx -p <your-local-password>
+```
 
-#### Creating the Docker images
+Nên dùng hai RSA certificate riêng — một cho ký và một cho mã hóa — tách biệt với chứng chỉ HTTPS. Tham khảo tài liệu [OpenIddict về chứng chỉ ký và mã hóa](https://documentation.openiddict.com/configuration/encryption-and-signing-credentials.html#registering-a-certificate-recommended-for-production-ready-scenarios) và [cấu hình OpenIddict trên ABP](https://abp.io/docs/latest/Deployment/Configuring-OpenIddict#production-environment).
 
-Navigate to [etc/build](./etc/build) folder and run the `build-images-locally.ps1` script. You can examine the script to set **image tag** for your images. It is `latest` by default.
+### Triển khai
 
-#### Running the Docker images using Docker-Compose
+Ứng dụng ABP được triển khai theo quy trình của ứng dụng .NET/ASP.NET Core. Repository này cung cấp Dockerfile và `docker-compose.yml` tại thư mục gốc để chạy ứng dụng cùng PostgreSQL; xem phần [Chạy bằng Docker Compose](#chạy-bằng-docker-compose). Hướng dẫn triển khai chung có tại [tài liệu deployment của ABP](https://abp.io/docs/latest/Deployment/Index).
 
-Navigate to [etc/docker](./etc/docker) folder and run the `run-docker.ps1` script. The script will generate developer certificates (if it doesn't exist already) with `dotnet dev-certs` command to use HTTPS. Then, the script runs the provided docker-compose file on detached mode.
+### Tài liệu tham khảo
 
-> Not: Developer certificate is only valid for **localhost** domain. If you want to deploy to a real DNS in a production environment, use LetsEncrypt or similar tools.
-
-#### Stopping the Docker containers
-
-Navigate to [etc/docker](./etc/docker) folder and run the `stop-docker.ps1` script. The script stops and removes the running containers.
-
-### Additional resources
-
-You can see the following resources to learn more about your solution and the ABP Framework:
-
-* [Application (Single Layer) Startup Template](https://abp.io/docs/latest/solution-templates/application-single-layer)
+- [Application (Single Layer) Startup Template](https://abp.io/docs/latest/solution-templates/application-single-layer)
+- [ABP Framework](https://abp.io/docs/latest/)
