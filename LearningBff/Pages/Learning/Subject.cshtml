@@ -213,6 +213,7 @@
         color: var(--learn-text-muted);
     }
 </style>
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/3.2.2/toastui-editor.min.css" />
 
 <div class="learning-container">
     @if (Model.CurrentSubject == null)
@@ -357,7 +358,7 @@
                     <div class="lesson-content-body">
                         @if (!string.IsNullOrWhiteSpace(Model.CurrentLesson.Content))
                         {
-                            @Html.Raw(Model.CurrentLesson.Content)
+                            <div id="lessonMarkdownContent" data-content="@Model.CurrentLesson.Content"></div>
                         }
                         else
                         {
@@ -412,7 +413,19 @@
 </div>
 
 @section scripts {
+    <script src="https://uicdn.toast.com/editor/3.2.2/toastui-editor-all.min.js"></script>
     <script>
+        var lessonContent = document.getElementById('lessonMarkdownContent');
+        if (lessonContent) {
+            var markdown = lessonContent.dataset.content || '';
+            toastui.Editor.factory({
+                el: lessonContent,
+                viewer: true,
+                initialValue: markdown,
+                usageStatistics: false
+            });
+        }
+
         function toggleLessonComplete(lessonId) {
             var token = $('input[name="__RequestVerificationToken"]').val();
             var btn = $('#btnToggleComplete');

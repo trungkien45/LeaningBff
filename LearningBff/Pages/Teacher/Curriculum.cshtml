@@ -6,6 +6,7 @@
 
 <!-- Select2 CSS -->
 <link rel="stylesheet" href="~/libs/select2/css/select2.min.css" />
+<link rel="stylesheet" href="https://uicdn.toast.com/editor/3.2.2/toastui-editor.min.css" />
 
 <style>
     :root {
@@ -118,6 +119,43 @@
         padding: 1.5rem;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.02);
     }
+    .lesson-markdown-editor .toastui-editor-defaultUI {
+        border-radius: 0.5rem;
+        overflow: visible;
+    }
+    .custom-modal-card.lesson-form-modal {
+        display: flex;
+        flex-direction: column;
+        width: min(1140px, 100%);
+        max-width: min(1140px, 100%);
+        max-height: calc(100vh - 2rem);
+        overflow: visible;
+    }
+    .custom-modal-card.lesson-view-modal {
+        width: min(1140px, 100%);
+        max-width: min(1140px, 100%);
+        max-height: none;
+        overflow: visible;
+    }
+    .lesson-modal-overlay {
+        overflow-y: auto;
+        align-items: safe center;
+    }
+    .lesson-form-modal .custom-modal-header,
+    .lesson-form-modal .custom-modal-footer {
+        flex-shrink: 0;
+    }
+    .lesson-form-modal form {
+        display: flex;
+        flex: 1;
+        flex-direction: column;
+        min-height: 0;
+    }
+    .lesson-form-modal .custom-modal-body {
+        flex: 1;
+        min-height: 0;
+        overflow: visible;
+    }
 
     /* Chapter Card Styles */
     .chapter-card {
@@ -202,6 +240,14 @@
     .custom-modal-overlay.active {
         display: flex;
     }
+    .lesson-view-overlay {
+        position: absolute;
+        inset: auto 0 auto;
+        top: 0;
+        height: auto;
+        min-height: 100vh;
+        align-items: flex-start;
+    }
     .custom-modal-card {
         background: #ffffff;
         border-radius: 1rem;
@@ -276,6 +322,14 @@
         <div class="alert alert-danger alert-dismissible fade show d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert">
             <i class="fas fa-exclamation-triangle fs-5"></i>
             <div>@Model.ErrorMessage</div>
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+    }
+    @if (Model.ContentTooLarge)
+    {
+        <div class="alert alert-warning alert-dismissible fade show d-flex align-items-center gap-2 mb-3 shadow-sm" role="alert">
+            <i class="fas fa-exclamation-triangle fs-5"></i>
+            <div>Nội dung bài học quá lớn để gửi. Ảnh đang nhúng Base64 có thể làm dung lượng tăng nhanh; hãy xóa bớt ảnh hoặc nội dung rồi thử lại.</div>
             <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
         </div>
     }
@@ -565,8 +619,8 @@
     </div>
 
     <!-- Modal: Tạo Bài học mới -->
-    <div class="custom-modal-overlay" id="createLessonModal">
-        <div class="custom-modal-card" style="max-width: 750px;">
+    <div class="custom-modal-overlay lesson-modal-overlay" id="createLessonModal">
+        <div class="custom-modal-card lesson-form-modal">
             <div class="custom-modal-header">
                 <div>
                     <h5 class="fw-bold mb-0 text-dark">
@@ -576,11 +630,14 @@
                 </div>
                 <button type="button" class="btn-close" onclick="closeModal('createLessonModal')"></button>
             </div>
-            <form method="post" asp-page-handler="CreateLesson">
+            <form id="createLessonForm" method="post" asp-page-handler="CreateLesson" asp-route-subjectId="@Model.SubjectId">
                 <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
                 <input type="hidden" name="chapterId" id="createLessonChapterId" />
 
                 <div class="custom-modal-body">
+                    <div class="lesson-content-limit-alert alert alert-warning d-none" role="alert">
+                        Nội dung bài học vượt quá giới hạn 3 MB. Ảnh đang nhúng Base64 có thể làm dung lượng tăng nhanh; hãy xóa bớt ảnh hoặc nội dung rồi thử lại.
+                    </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Tiêu đề bài học <span class="text-danger">*</span></label>
                         <input type="text" name="title" class="form-control" placeholder="Ví dụ: Bài 1: Cài đặt Visual Studio và .NET SDK..." required />
@@ -588,7 +645,8 @@
 
                     <div class="mb-0">
                         <label class="form-label fw-semibold">Nội dung bài học (Giáo trình, tài liệu, hướng dẫn)</label>
-                        <textarea name="content" class="form-control" rows="8" placeholder="Nhập nội dung bài giảng, mã nguồn mẫu, hướng dẫn học viên..."></textarea>
+                        <div id="createLessonContentEditor" class="lesson-markdown-editor"></div>
+                        <input type="hidden" name="content" id="createLessonContent" />
                     </div>
                 </div>
 
@@ -603,19 +661,22 @@
     </div>
 
     <!-- Modal: Sửa Bài học -->
-    <div class="custom-modal-overlay" id="editLessonModal">
-        <div class="custom-modal-card" style="max-width: 750px;">
+    <div class="custom-modal-overlay lesson-modal-overlay" id="editLessonModal">
+        <div class="custom-modal-card lesson-form-modal">
             <div class="custom-modal-header">
                 <h5 class="fw-bold mb-0 text-dark">
                     <i class="fas fa-edit text-primary me-2"></i> Chỉnh sửa bài học
                 </h5>
                 <button type="button" class="btn-close" onclick="closeModal('editLessonModal')"></button>
             </div>
-            <form method="post" asp-page-handler="UpdateLesson">
+            <form id="editLessonForm" method="post" asp-page-handler="UpdateLesson" asp-route-subjectId="@Model.SubjectId">
                 <input type="hidden" name="subjectId" value="@Model.CurrentSubject.Id" />
                 <input type="hidden" name="lessonId" id="editLessonId" />
 
                 <div class="custom-modal-body">
+                    <div class="lesson-content-limit-alert alert alert-warning d-none" role="alert">
+                        Nội dung bài học vượt quá giới hạn 3 MB. Ảnh đang nhúng Base64 có thể làm dung lượng tăng nhanh; hãy xóa bớt ảnh hoặc nội dung rồi thử lại.
+                    </div>
                     <div class="mb-3">
                         <label class="form-label fw-semibold">Tiêu đề bài học <span class="text-danger">*</span></label>
                         <input type="text" name="title" id="editLessonTitle" class="form-control" required />
@@ -623,7 +684,8 @@
 
                     <div class="mb-0">
                         <label class="form-label fw-semibold">Nội dung bài học</label>
-                        <textarea name="content" id="editLessonContent" class="form-control" rows="8"></textarea>
+                        <div id="editLessonContentEditor" class="lesson-markdown-editor"></div>
+                        <input type="hidden" name="content" id="editLessonContent" />
                     </div>
                 </div>
 
@@ -638,14 +700,14 @@
     </div>
 
     <!-- Modal: Xem trước nội dung Bài học -->
-    <div class="custom-modal-overlay" id="viewLessonModal">
-        <div class="custom-modal-card" style="max-width: 800px;">
+    <div class="custom-modal-overlay lesson-view-overlay" id="viewLessonModal">
+        <div class="custom-modal-card lesson-view-modal">
             <div class="custom-modal-header">
                 <h5 class="fw-bold mb-0 text-dark" id="viewLessonTitle"></h5>
                 <button type="button" class="btn-close" onclick="closeModal('viewLessonModal')"></button>
             </div>
             <div class="custom-modal-body">
-                <div id="viewLessonContent" class="p-3 bg-light rounded border" style="max-height: 450px; overflow-y: auto; white-space: pre-wrap; font-family: inherit; line-height: 1.6;">
+                <div id="viewLessonContent" class="p-3 bg-light rounded border" style="line-height: 1.6;">
                     <div class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-1"></i> Đang tải nội dung...</div>
                 </div>
             </div>
@@ -688,8 +750,49 @@
 @section Scripts {
     <!-- Select2 JS -->
     <script src="~/libs/select2/js/select2.full.min.js"></script>
+    <script src="https://uicdn.toast.com/editor/3.2.2/toastui-editor-all.min.js"></script>
 
     <script>
+        var createLessonEditor;
+        var editLessonEditor;
+        var lessonViewer;
+        var maxLessonContentLength = 3 * 1024 * 1024;
+        document.body.appendChild(document.getElementById('viewLessonModal'));
+
+        function initializeLessonEditor(elementId, editor) {
+            if (editor) {
+                return editor;
+            }
+
+            return new toastui.Editor({
+                el: document.getElementById(elementId),
+                height: 'min(58vh, 620px)',
+                initialEditType: 'wysiwyg',
+                previewStyle: 'vertical',
+                usageStatistics: false
+            });
+        }
+
+        function renderLessonMarkdown(container, markdown) {
+            if (lessonViewer) {
+                lessonViewer.destroy();
+                lessonViewer = null;
+            }
+            container.replaceChildren();
+            container.classList.remove('text-muted', 'font-italic', 'text-danger');
+            if (markdown && markdown.trim()) {
+                lessonViewer = toastui.Editor.factory({
+                    el: container,
+                    viewer: true,
+                    initialValue: markdown,
+                    usageStatistics: false
+                });
+            } else {
+                container.textContent = 'Chưa có nội dung chi tiết cho bài học này.';
+                container.classList.add('text-muted', 'font-italic');
+            }
+        }
+
         $(document).ready(function () {
             // Select2 AJAX Pagination
             $('#subjectSelect').select2({
@@ -737,8 +840,12 @@
         function openModal(id) {
             var el = document.getElementById(id);
             if (el) {
+                if (id === 'viewLessonModal') {
+                    el.style.top = window.scrollY + 'px';
+                } else {
+                    document.body.style.overflow = 'hidden';
+                }
                 el.classList.add('active');
-                document.body.style.overflow = 'hidden';
             }
         }
 
@@ -746,7 +853,9 @@
             var el = document.getElementById(id);
             if (el) {
                 el.classList.remove('active');
-                document.body.style.overflow = '';
+                if (id !== 'viewLessonModal') {
+                    document.body.style.overflow = '';
+                }
             }
         }
 
@@ -771,6 +880,8 @@
             document.getElementById('createLessonChapterId').value = chapterId;
             document.getElementById('createLessonChapterTitle').textContent = 'Chương: ' + chapterName;
             openModal('createLessonModal');
+            createLessonEditor = initializeLessonEditor('createLessonContentEditor', createLessonEditor);
+            createLessonEditor.setMarkdown('');
         }
 
         function openEditLessonModal(lessonId) {
@@ -778,8 +889,9 @@
                 if (res && res.success && res.data) {
                     document.getElementById('editLessonId').value = res.data.id;
                     document.getElementById('editLessonTitle').value = res.data.title;
-                    document.getElementById('editLessonContent').value = res.data.content || '';
                     openModal('editLessonModal');
+                    editLessonEditor = initializeLessonEditor('editLessonContentEditor', editLessonEditor);
+                    editLessonEditor.setMarkdown(res.data.content || '');
                 } else {
                     alert(res.message || 'Không thể tải chi tiết bài học.');
                 }
@@ -790,18 +902,16 @@
             document.getElementById('viewLessonTitle').textContent = lessonTitle;
             var contentEl = document.getElementById('viewLessonContent');
             contentEl.innerHTML = '<div class="text-center py-3 text-muted"><i class="fas fa-spinner fa-spin me-1"></i> Đang tải...</div>';
+            contentEl.classList.remove('text-muted', 'font-italic', 'text-danger');
             openModal('viewLessonModal');
 
             $.getJSON('?handler=LessonDetailJson', { lessonId: lessonId }, function (res) {
                 if (res && res.success && res.data) {
                     var text = res.data.content;
-                    if (!text || text.trim() === '') {
-                        contentEl.innerHTML = '<div class="text-muted font-italic">Chưa có nội dung chi tiết cho bài học này.</div>';
-                    } else {
-                        contentEl.textContent = text;
-                    }
+                    renderLessonMarkdown(contentEl, text || '');
                 } else {
-                    contentEl.innerHTML = '<div class="text-danger">' + (res.message || 'Lỗi khi tải nội dung bài học.') + '</div>';
+                    contentEl.textContent = res.message || 'Lỗi khi tải nội dung bài học.';
+                    contentEl.classList.add('text-danger');
                 }
             });
         }
@@ -811,5 +921,24 @@
             document.getElementById('deleteLessonTitle').textContent = title;
             openModal('deleteLessonModal');
         }
+
+        function setLessonContentOnSubmit(form, editor, contentInput, event) {
+            var markdown = editor ? editor.getMarkdown() : '';
+            contentInput.value = markdown;
+
+            var isTooLarge = markdown.length > maxLessonContentLength;
+            form.querySelector('.lesson-content-limit-alert').classList.toggle('d-none', !isTooLarge);
+            if (isTooLarge) {
+                event.preventDefault();
+            }
+        }
+
+        document.getElementById('createLessonForm').addEventListener('submit', function (event) {
+            setLessonContentOnSubmit(this, createLessonEditor, document.getElementById('createLessonContent'), event);
+        });
+
+        document.getElementById('editLessonForm').addEventListener('submit', function (event) {
+            setLessonContentOnSubmit(this, editLessonEditor, document.getElementById('editLessonContent'), event);
+        });
     </script>
 }

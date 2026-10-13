@@ -449,6 +449,57 @@ public class LearningBffModule : AbpModule
 
         app.UseAuditing();
         app.UseAbpSerilogEnrichers();
+        app.Use(async (httpContext, next) =>
+        {
+            try
+            {
+                await next();
+            }
+            catch (Exception ex) when (IsOversizedLessonContentForm(ex, httpContext.Request))
+            {
+                var logger = httpContext.RequestServices.GetRequiredService<Microsoft.Extensions.Logging.ILogger<LearningBffModule>>();
+                logger.LogWarning(ex, "Rejected an oversized lesson content form submission.");
+
+                var redirectUrl = $"{httpContext.Request.PathBase}{httpContext.Request.Path}";
+                if (long.TryParse(httpContext.Request.Query["subjectId"], out var subjectId))
+                {
+                    redirectUrl += $"?subjectId={subjectId}&contentTooLarge=true";
+                }
+                else
+                {
+                    redirectUrl += "?contentTooLarge=true";
+                }
+
+                httpContext.Response.Redirect(redirectUrl);
+            }
+        });
         app.UseConfiguredEndpoints();
+    }
+
+    private static bool IsOversizedLessonContentForm(Exception exception, Microsoft.AspNetCore.Http.HttpRequest request)
+    {
+        if (!string.Equals(request.Path.Value, "/Teacher/Curriculum", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var handler = request.Query["handler"];
+        if (!string.Equals(handler, "CreateLesson", StringComparison.OrdinalIgnoreCase)
+            && !string.Equals(handler, "UpdateLesson", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        for (var current = exception; current is not null; current = current.InnerException)
+        {
+            if (current is InvalidDataException
+                && (current.Message.Contains("Form key length limit", StringComparison.OrdinalIgnoreCase)
+                    || current.Message.Contains("value length limit", StringComparison.OrdinalIgnoreCase)))
+            {
+                return true;
+            }
+        }
+
+        return false;
     }
 }

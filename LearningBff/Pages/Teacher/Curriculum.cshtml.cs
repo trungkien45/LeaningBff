@@ -13,6 +13,8 @@ namespace LearningBff.Pages.Teacher;
 [Authorize(Roles = LearningBffConsts.Teacher)]
 public class CurriculumModel : AbpPageModel
 {
+    private const int MaximumLessonContentLength = 3 * 1024 * 1024;
+
     private readonly SubjectTeacherAppService _subjectTeacherAppService;
     private readonly ChappterTeacherAppService _chapterTeacherAppService;
     private readonly LessonTeacherAppService _lessonTeacherAppService;
@@ -29,6 +31,9 @@ public class CurriculumModel : AbpPageModel
 
     [BindProperty(SupportsGet = true)]
     public long? SubjectId { get; set; }
+
+    [BindProperty(SupportsGet = true)]
+    public bool ContentTooLarge { get; set; }
 
     public SubjectDto? CurrentSubject { get; set; }
     public List<ChapterDto> Chapters { get; set; } = new();
@@ -144,6 +149,11 @@ public class CurriculumModel : AbpPageModel
 
     public async Task<IActionResult> OnPostCreateLessonAsync(long subjectId, long chapterId, string title, string? content)
     {
+        if (IsLessonContentTooLarge(content))
+        {
+            return RedirectToPage(new { subjectId });
+        }
+
         try
         {
             await _lessonTeacherAppService.AddLessonToChapterAsync(chapterId, new CreateLessonDto
@@ -163,6 +173,11 @@ public class CurriculumModel : AbpPageModel
 
     public async Task<IActionResult> OnPostUpdateLessonAsync(long subjectId, long lessonId, string title, string? content)
     {
+        if (IsLessonContentTooLarge(content))
+        {
+            return RedirectToPage(new { subjectId });
+        }
+
         try
         {
             await _lessonTeacherAppService.UpdateLessonAsync(lessonId, new UpdateLessonDto
@@ -193,5 +208,16 @@ public class CurriculumModel : AbpPageModel
         }
 
         return RedirectToPage(new { subjectId });
+    }
+
+    private bool IsLessonContentTooLarge(string? content)
+    {
+        if (content is null || content.Length <= MaximumLessonContentLength)
+        {
+            return false;
+        }
+
+        ErrorMessage = "Nội dung bài học vượt quá giới hạn 3 MB. Ảnh đang nhúng Base64 có thể làm dung lượng tăng nhanh; hãy xóa bớt ảnh hoặc nội dung rồi thử lại.";
+        return true;
     }
 }
