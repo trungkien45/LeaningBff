@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Threading.Tasks;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -259,28 +260,61 @@ public class QuestionsModel : AbpPageModel
         long subjectId,
         Microsoft.AspNetCore.Http.IFormFile file,
         string? search = null,
-        int currentPage = 1)
+        int currentPage = 1,
+        CancellationToken cancellationToken = default)
     {
+        Response.ContentType = "text/event-stream";
+        Response.Headers["Cache-Control"] = "no-cache";
+        Response.Headers["X-Accel-Buffering"] = "no";
+        await Response.StartAsync(cancellationToken);
+
+        var latestProgress = new ImportQuestionProgressDto(
+            "processing",
+            0,
+            0,
+            0,
+            0,
+            0);
         try
         {
+            await WriteSseEventAsync("started", new { message = "Đã tải tệp lên, bắt đầu đọc dữ liệu..." }, cancellationToken);
             var result = await _questionBankTeacherAppService.ImportQuestion(new ImportQuestionDto
             {
                 SubjectId = subjectId,
                 File = file
-            });
-
-            SuccessMessage = $"Import hoàn tất: đã nhập {result.ImportedQuestions}/{result.TotalQuestions} câu hỏi.";
-            if (result.Errors.Count > 0)
+            }, async progress =>
             {
-                ErrorMessage = string.Join(Environment.NewLine, result.Errors);
-            }
+                latestProgress = progress;
+                await WriteSseEventAsync("progress", progress, cancellationToken);
+            }, cancellationToken);
+
+            await WriteSseEventAsync("complete", result, cancellationToken);
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+        {
+            // The browser disconnected or the user cancelled the import.
         }
         catch (Exception ex)
         {
-            ErrorMessage = ex.Message;
+            await WriteSseEventAsync("error", new
+            {
+                message = ex.Message,
+                importedQuestions = latestProgress.ImportedQuestions,
+                errorCount = latestProgress.ErrorCount
+            }, cancellationToken);
         }
 
-        return RedirectToPage(new { subjectId, search, currentPage });
+        return new EmptyResult();
+    }
+
+    private async Task WriteSseEventAsync(string eventName, object data, CancellationToken cancellationToken)
+    {
+        var json = JsonSerializer.Serialize(data, new JsonSerializerOptions
+        {
+            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+        });
+        await Response.WriteAsync($"event: {eventName}\ndata: {json}\n\n", cancellationToken);
+        await Response.Body.FlushAsync(cancellationToken);
     }
 
     public async Task<IActionResult> OnPostCreateAnswerAsync(

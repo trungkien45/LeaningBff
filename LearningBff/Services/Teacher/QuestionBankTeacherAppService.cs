@@ -7,6 +7,7 @@ using System.Linq;
 using Volo.Abp;
 using Volo.Abp.Authorization;
 using Volo.Abp.Domain.Repositories;
+using Volo.Abp.Uow;
 using Volo.Abp.Users;
 using static LearningBff.Permissions.LearningBffPermissions;
 
@@ -17,17 +18,20 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
     private readonly IRepository<Question, long> _questionRepository;
     private readonly IRepository<Answer, long> _answerRepository;
     private readonly IRepository<ExamQuestion, long> _examQuestionRepository;
+    private readonly IUnitOfWorkManager _unitOfWorkManager;
 
     public QuestionBankTeacherAppService(
         IRepository<Subject, long> subjectRepository,
         IRepository<Question, long> questionRepository,
         IRepository<Answer, long> answerRepository,
         IRepository<ExamQuestion, long> examQuestionRepository,
+        IUnitOfWorkManager unitOfWorkManager,
         ICurrentUser currentUser) : base(subjectRepository, currentUser)
     {
         _questionRepository = questionRepository;
         _answerRepository = answerRepository;
         _examQuestionRepository = examQuestionRepository;
+        _unitOfWorkManager = unitOfWorkManager;
     }
     public async Task<(List<QuestionDto> Questions, int TotalCount)> GetQuestionsOfSubjectAsync(long? subjectId, string searchName = "",
         int page = 1,
@@ -202,8 +206,12 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             Order = question.Order,
         };
     }
-    public async Task<ImportQuestionResultDto> ImportQuestion(ImportQuestionDto importQuestionDto)
+    public async Task<ImportQuestionResultDto> ImportQuestion(
+        ImportQuestionDto importQuestionDto,
+        Func<ImportQuestionProgressDto, Task>? reportProgress = null,
+        CancellationToken cancellationToken = default)
     {
+        cancellationToken.ThrowIfCancellationRequested();
         Subject subject = await FindSubjectForTeacherAsync(importQuestionDto.SubjectId);
         if (importQuestionDto.File == null || importQuestionDto.File.Length == 0)
         {
@@ -218,23 +226,40 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
         using var workbook = new XLWorkbook(memoryStream);
         var worksheet = workbook.Worksheet(1);
 
-        var questionList = new List<Question>();
         var result = new ImportQuestionResultDto
         {
-            TotalQuestions = 0,
             ImportedQuestions = 0,
             Errors = new List<string>()
         };
-        foreach (var row in worksheet.RowsUsed().Skip(1))
+        var rows = worksheet.RowsUsed().Skip(1).ToList();
+        result.TotalQuestions = rows.Count;
+        var processedRows = 0;
+        foreach (var row in rows)
         {
-            result.TotalQuestions++;
+            cancellationToken.ThrowIfCancellationRequested();
             var rowNumber = row.RowNumber();
+
+            async Task ReportProgressAsync()
+            {
+                processedRows++;
+                if (reportProgress != null)
+                {
+                    await reportProgress(new ImportQuestionProgressDto(
+                        "processing",
+                        processedRows,
+                        result.TotalQuestions,
+                        result.ImportedQuestions,
+                        result.Errors.Count,
+                        rowNumber));
+                }
+            }
 
             var question = row.Cell(1).GetString();
             var typeStr = row.Cell(2).GetString();
             if (string.IsNullOrWhiteSpace(question))
             {
                 result.Errors.Add($"Dòng {rowNumber} không có tiêu đề câu hỏi.");
+                await ReportProgressAsync();
                 continue;
             }
             var type = typeStr switch
@@ -246,6 +271,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             if (type == null)
             {
                 result.Errors.Add($"Dòng {rowNumber} có kiểu câu hỏi không hợp lệ.");
+                await ReportProgressAsync();
                 continue;
             }
             var questionEntity = new Question
@@ -260,6 +286,7 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             if (lastCell == null || lastCell.Address.ColumnNumber < 3)
             {
                 result.Errors.Add($"Dòng {rowNumber} không có đáp án nào.");
+                await ReportProgressAsync();
                 continue;
             }
 
@@ -269,12 +296,14 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             if (questionEntity.Type == QuestionType.Single && correctCount != 1)
             {
                 result.Errors.Add($"Dòng {rowNumber} là câu hỏi loại 'Một đáp án đúng' nhưng có {correctCount} đáp án đúng.");
+                await ReportProgressAsync();
                 continue;
             }
 
             if (correctCount == 0)
             {
                 result.Errors.Add($"Dòng {rowNumber} không có đáp án đúng nào.");
+                await ReportProgressAsync();
                 continue;
             }
 
@@ -304,15 +333,21 @@ public class QuestionBankTeacherAppService : TeacherBaseAppService
             if (questionEntity.Answers.Count == 0)
             {
                 result.Errors.Add($"Dòng {rowNumber} không có đáp án hợp lệ nào.");
+                await ReportProgressAsync();
                 continue;
             }
 
-            questionList.Add(questionEntity);
+            using (var unitOfWork = _unitOfWorkManager.Begin(requiresNew: true, isTransactional: true))
+            {
+                await _questionRepository.InsertAsync(
+                    questionEntity,
+                    autoSave: true,
+                    cancellationToken: cancellationToken);
+                await unitOfWork.CompleteAsync(cancellationToken);
+            }
+
             result.ImportedQuestions++;
-        }
-        if (questionList.Count > 0)
-        {
-            await _questionRepository.InsertManyAsync(questionList, autoSave: true);
+            await ReportProgressAsync();
         }
 
         return result;
