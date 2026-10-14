@@ -57,6 +57,37 @@ Yêu cầu:
 
 Địa chỉ local mặc định được cấu hình trong `LearningBff/appsettings.json` và `etc/run-profiles/Default.abprun.json`. Nếu thay đổi URL hoặc cổng, hãy cập nhật các giá trị URL liên quan như `App:SelfUrl` và `AuthServer:Authority` cho đồng nhất.
 
+## Cấu hình đăng nhập bằng Google
+
+1. Trong [Google Cloud Console](https://console.cloud.google.com/), tạo hoặc chọn một project, cấu hình màn hình đồng ý OAuth (OAuth consent screen / Google Auth Platform) và thêm tài khoản của bạn vào danh sách test users nếu ứng dụng đang ở chế độ Testing.
+2. Tạo OAuth client ID loại **Web application**. Thêm callback URL vào **Authorized redirect URIs**:
+
+   | Cách chạy ứng dụng | Authorized redirect URI |
+   | --- | --- |
+   | Local theo cấu hình mặc định | `https://localhost:44368/signin-google` |
+   | Docker Compose ở repository root | `http://localhost:8080/signin-google` |
+
+   Nếu đổi hostname, scheme hoặc cổng, dùng URL bên ngoài mà trình duyệt truy cập được, nối thêm `/signin-google`. Đây là callback mặc định của Google authentication middleware trong ứng dụng. Với cấu hình production, đăng ký callback HTTPS của domain production; không dùng URL localhost.
+3. Cấu hình Client ID và Client Secret. Khi chạy local bằng PowerShell, đặt biến môi trường trong terminal trước khi khởi động ứng dụng:
+
+   ```powershell
+   $env:Authentication__Google__ClientId = "<Google OAuth Client ID>"
+   $env:Authentication__Google__ClientSecret = "<Google OAuth Client Secret>"
+   dotnet run --project LearningBff/LearningBff.csproj
+   ```
+
+   .NET chuyển `__` trong tên biến môi trường thành `:` trong khóa cấu hình. Có thể dùng user-secrets hoặc secret store thay cho biến môi trường; tránh ghi Client Secret vào `appsettings*.json` hoặc Git.
+4. Khi chạy bằng Docker Compose, hai giá trị cũng phải được truyền vào service `web` dưới các khóa `Authentication__Google__ClientId` và `Authentication__Google__ClientSecret`. Ví dụ, thêm vào `environment` của service `web` trong `docker-compose.yml`:
+
+   ```yaml
+   Authentication__Google__ClientId: ${GOOGLE_CLIENT_ID}
+   Authentication__Google__ClientSecret: ${GOOGLE_CLIENT_SECRET}
+   ```
+
+   Sau đó cung cấp `GOOGLE_CLIENT_ID` và `GOOGLE_CLIENT_SECRET` qua môi trường triển khai hoặc file `.env` không được commit, rồi khởi động lại service.
+
+Google login chỉ được đăng ký khi cả Client ID và Client Secret đều có giá trị. Nếu không thấy tùy chọn đăng nhập Google hoặc bị lỗi redirect, kiểm tra lại thông tin OAuth, callback URL, URL ứng dụng và log của ứng dụng.
+
 ## Cấu hình và bảo mật
 
 - Các thiết lập có thể được ghi đè bằng biến môi trường theo quy ước cấu hình của .NET, ví dụ `ConnectionStrings__Default`.
@@ -78,7 +109,7 @@ Các hướng dẫn dưới đây giữ lại thông tin nền tảng của temp
 
 ### Về solution
 
-Đây là ứng dụng single-layer, không chia thành nhiều project layer. Các module nền tảng của ABP đã được cài đặt. Tham khảo tài liệu [Application (Single Layer) Startup Template](https://abp.io/docs/latest/solution-templates/application-single-layer) để biết thêm.
+Đây là ứng dụng single-layer, không chia thành nhiều project layer. Các module nền tảng của ABP đã được cài đặt. Tham khảo tài liệu [Application (Single Layer) Startup Template](https://abp.io/docs/latest/solution-templates/single-layer-web-application) để biết thêm.
 
 ### Cài thư viện client-side
 
@@ -100,13 +131,13 @@ Ví dụ tạo chứng chỉ HTTPS phát triển (không thay thế quy trình c
 dotnet dev-certs https -v -ep openiddict.pfx -p <your-local-password>
 ```
 
-Nên dùng hai RSA certificate riêng — một cho ký và một cho mã hóa — tách biệt với chứng chỉ HTTPS. Tham khảo tài liệu [OpenIddict về chứng chỉ ký và mã hóa](https://documentation.openiddict.com/configuration/encryption-and-signing-credentials.html#registering-a-certificate-recommended-for-production-ready-scenarios) và [cấu hình OpenIddict trên ABP](https://abp.io/docs/latest/Deployment/Configuring-OpenIddict#production-environment).
+Nên dùng hai RSA certificate riêng — một cho ký và một cho mã hóa — tách biệt với chứng chỉ HTTPS. Tham khảo tài liệu [OpenIddict về chứng chỉ ký và mã hóa](https://documentation.openiddict.com/configuration/encryption-and-signing-credentials.html#registering-a-certificate-recommended-for-production-ready-scenarios) và [cấu hình OpenIddict trên ABP](https://abp.io/docs/latest/deployment/configuring-openIddict#production-environment).
 
 ### Triển khai
 
-Ứng dụng ABP được triển khai theo quy trình của ứng dụng .NET/ASP.NET Core. Repository này cung cấp Dockerfile và `docker-compose.yml` tại thư mục gốc để chạy ứng dụng cùng PostgreSQL; xem phần [Chạy bằng Docker Compose](#chạy-bằng-docker-compose). Hướng dẫn triển khai chung có tại [tài liệu deployment của ABP](https://abp.io/docs/latest/Deployment/Index).
+Ứng dụng ABP được triển khai theo quy trình của ứng dụng .NET/ASP.NET Core. Repository này cung cấp Dockerfile và `docker-compose.yml` tại thư mục gốc để chạy ứng dụng cùng PostgreSQL; xem phần [Chạy bằng Docker Compose](#chạy-bằng-docker-compose). Hướng dẫn triển khai chung có tại [tài liệu deployment của ABP](https://abp.io/docs/latest/deployment).
 
 ### Tài liệu tham khảo
 
-- [Application (Single Layer) Startup Template](https://abp.io/docs/latest/solution-templates/application-single-layer)
+- [Application (Single Layer) Startup Template](https://abp.io/docs/latest/solution-templates/single-layer-web-application)
 - [ABP Framework](https://abp.io/docs/latest/)
